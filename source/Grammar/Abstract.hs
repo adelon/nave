@@ -113,7 +113,7 @@ data Quant
 data Stmt
    = StmtFormula Formula
    | StmtNeg Stmt
-   | StmtAttr Term AttrL
+   | StmtAttr Term Attr
    | StmtVerb Term Verb
    | StmtNotion Term Notion
    | StmtExists Notion

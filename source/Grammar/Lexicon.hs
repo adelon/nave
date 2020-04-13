@@ -26,10 +26,17 @@ data Lexicon = Lexicon
    , lexiconConnectives :: [[(Holey Tok, Associativity)]]
    , lexiconRelators :: Set Relator
    , lexiconVerbs :: [SgPl Pattern]
-   , lexiconAttrs :: [Pattern]
+   , lexiconAttrLs :: [Pattern]
+   , lexiconAttrRs :: [Pattern]
    , lexiconNoms :: [SgPl Pattern]
    , lexiconFuns :: [SgPl Pattern]
    } deriving (Show, Eq)
+
+-- Combined projection of both left and right attributes.
+--
+lexiconAttr :: Lexicon -> [Pattern]
+lexiconAttr lexicon = lexiconAttrLs lexicon <> lexiconAttrRs lexicon
+
 
 
 builtins :: Lexicon
@@ -38,7 +45,8 @@ builtins = Lexicon
    , lexiconOperators = builtinOperators
    , lexiconConnectives = builtinConnectives
    , lexiconRelators = builtinRelators
-   , lexiconAttrs = builtinAttrs
+   , lexiconAttrLs = builtinAttrLs
+   , lexiconAttrRs = builtinAttrRs
    , lexiconVerbs = builtinVerbs
    , lexiconNoms = builtinNominals
    , lexiconFuns = builtinFuns
@@ -99,8 +107,8 @@ binOp :: Tok -> Holey Tok
 binOp tok = [Nothing, Just tok, Nothing]
 
 
-builtinAttrs :: [Pattern]
-builtinAttrs = fmap unsafeReadPattern
+builtinAttrLs :: [Pattern]
+builtinAttrLs = fmap unsafeReadPattern
    [ "associative"
    , "even"
    , "injective"
@@ -111,7 +119,13 @@ builtinAttrs = fmap unsafeReadPattern
    , "reflexive"
    , "surjective"
    , "transitive"
-   , "coprime to ?"
+   ]
+
+builtinAttrRs :: [Pattern]
+builtinAttrRs = fmap unsafeReadPattern
+   [ "coprime to ?"
+   , "of finite order"
+   , "of finite type"
    , "pointwise bounded by ? on ?"
    ]
 

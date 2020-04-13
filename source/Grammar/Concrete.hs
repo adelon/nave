@@ -18,7 +18,7 @@ module Grammar.Concrete where
 import Base
 import Grammar.Abstract
 import Grammar.Literals
-import Grammar.Lexicon (Lexicon(..), splitOnPreposition)
+import Grammar.Lexicon (Lexicon(..), lexiconAttr, splitOnPreposition)
 
 import Text.Earley (Grammar, Prod, (<?>), rule, satisfy, terminal, token)
 import Text.Earley.Mixfix (mixfixExpression)
@@ -90,8 +90,9 @@ grammar lexicon@Lexicon{..} = mdo
 -- 'unexpected <token>' error.
 --
    attrL       <- rule (attrLOf lexicon term)
-   attrR       <- rule [AttrSuch s | s <- suchStmt]
-   attr        <- rule [Attr a ts | ~(AttrL a ts) <- attrL]
+   attrR       <- rule (attrROf lexicon term)
+-- attrSuch    <- rule [AttrSuch s | s <- suchStmt]
+   attr        <- rule (attrOf lexicon term)
    verb        <- rule (verbOf lexicon sg term)
    fun         <- rule (funOf lexicon sg term)
 
@@ -109,8 +110,8 @@ grammar lexicon@Lexicon{..} = mdo
 
 -- Basic statements are statements without any conjunctions or quantifiers.
 --
-   stmtAttr    <- rule [StmtAttr t a | t <- term, _is, a <- attrL]
-   stmtAttrNeg <- rule [StmtNeg (StmtAttr t a) | t <- term, _is, _not, a <- attrL]
+   stmtAttr    <- rule [StmtAttr t a | t <- term, _is, a <- attr]
+   stmtAttrNeg <- rule [StmtNeg (StmtAttr t a) | t <- term, _is, _not, a <- attr]
    stmtVerb    <- rule [StmtVerb t x | t <- term, x <- verb]
    stmtNotion  <- rule [StmtNotion t n | t <- term, _is, _an, n <- notion]
    stmtExists  <- rule [StmtExists n | _exists, _an, n <- notion]
@@ -205,7 +206,13 @@ patternOf constr lexicon selector proj arg =
          []           -> pure []
 
 attrLOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok AttrL
-attrLOf lexicon arg = patternOf AttrL lexicon lexiconAttrs id arg
+attrLOf lexicon arg = patternOf AttrL lexicon lexiconAttrLs id arg
+
+attrROf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok AttrR
+attrROf lexicon arg = patternOf AttrR lexicon lexiconAttrRs id arg
+
+attrOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok Attr
+attrOf lexicon arg = patternOf Attr lexicon lexiconAttr id arg
 
 notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok Term -> Prod r e Tok BaseNotion
 notionOf lexicon proj arg = patternOf BaseNotion lexicon lexiconNoms proj arg
