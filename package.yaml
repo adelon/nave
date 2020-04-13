@@ -1,0 +1,74 @@
+name: nave
+version: 0.0.0.0
+license: BSD2
+github: adelon/nave
+
+extra-source-files:
+  - readme.md
+  - license.md
+
+dependencies:
+  - base < 4.14
+  - base-prelude < 4.14
+  - comprehensions-ghc
+  - containers
+  - directory
+  - Earley
+  - megaparsec
+  - mtl
+  - prettyprinter
+  - text
+  - transformers
+  - unordered-containers
+
+default-extensions:
+  - ApplicativeDo
+  - BlockArguments
+  - DeriveFunctor
+  - FlexibleContexts
+  - FlexibleInstances
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - InstanceSigs
+  - LambdaCase
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PartialTypeSignatures
+  - PatternSynonyms
+  - ScopedTypeVariables
+  - TypeFamilies
+  - TypeOperators
+
+ghc-options:
+  # Warnings
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-uni-patterns
+  - -Wincomplete-record-updates
+  - -Wredundant-constraints
+  - -fno-warn-unused-do-bind
+  # Cleaning up GHC's error messages
+  - -freverse-errors
+  - -fhide-source-paths
+
+library:
+  source-dirs: source/
+
+executables:
+  nave:
+    main: app.hs
+    dependencies:
+      - nave
+    ghc-options:
+      - -rtsopts
+      - -threaded
+      - -with-rtsopts=-N
+
+tests:
+  nave-test:
+    main: Spec.hs
+    source-dirs: test/
+    dependencies:
+      - nave
+      - hspec
+      - hspec-megaparsec

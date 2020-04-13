@@ -1,0 +1,4 @@
+resolver: lts-14.21
+
+extra-deps:
+- comprehensions-ghc-0.1.0.1

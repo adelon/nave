@@ -1,0 +1,26 @@
+% Based on the Isar formalization
+%
+% Gertrud Bauer and Markus Wenzel
+% 'The Hahn-Banach Theorem in Isabelle/Isar'
+% http://www21.in.tum.de/~wenzelm/papers/HahnBanach-in-Isar.pdf
+%
+
+
+\begin{theorem}[Hahn-Banach]
+  Let $E$ be a vector space over $\reals$.
+  Let $F$ be a subspace of $E$.
+  Let $p$ be a seminorm on $E$.
+  Let $f$ be a linear form on $F$.
+  Suppose that for all $x$ we have $f(x) ≤ p(x)$.
+
+  Then there exists a linear form $h$ on $E$
+  such that $f$ agrees with $h$ on $F$
+  and $h$ is pointwise bounded by $p$ on $E$.
+\end{theorem}
+
+
+\begin{proof}
+  Suppose that for all $x$ we have $f(x) ≤ p(x)$.
+  Let $M$ be the set of norm-preserving extensions of $F$.
+  ...
+\end{proof}

@@ -1,0 +1,40 @@
+\begin{definition}
+  Let $X$ be a set.
+  Let $f$ be an endomorphism of $X$.
+  We say that $x$ is a fixed point of $f$ iff $f(x) = x$.
+  %           ^^^
+  %           Type-inference should yield `x ∈ X`.
+  %
+\end{definition}
+
+
+\begin{theorem}[Tarski]
+  Let $L$ be a lattice.
+  Let $f$ be an endomorphism of $L$.
+  Then there exists a fixed point of $f$.
+\end{theorem}
+
+% Based on the formal Isar proof found in
+% Makarius Wenzel: 'Miscellaneous Isabelle/Isar examples'
+% https://isabelle.in.tum.de/dist/library/HOL/HOL-Isar_Examples/document.pdf
+%
+\begin{proof}[Tarski]
+  Let $H$ be the set of fixed points of $f$.
+  Let $a$ be the infimum of $H$.
+  We show that $a$ is a fixed point of $f$.
+
+    First we show that $f(a) ≤ a$.
+
+      Fix $x ∈ H$.
+      We have $a ≤ x$. %by \ref{InfLower}.
+      Since $f$ is monotone, we have $f(a) ≤ f(x)$.
+      Since $x ∈ H$, we have $f(x) ≤ x$.
+      Thus $f(a) ≤ x$.
+
+    Finally we show that $a ≤ f(a)$.
+
+      Since $f$ is monotone and $f(a) ≤ a$, we have $f(f(a)) ≤ f(a)$.
+      Thus $f(a) ∈ H$.
+
+    Thus $a$ is a fixed point of $f$.
+\end{proof}

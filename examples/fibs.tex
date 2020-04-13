@@ -1,0 +1,22 @@
+\begin{definition}
+  % Suggested rendering: \fib{n} = F_n
+  %
+  %The the Fibonacci numbers $\fib{n}$ are the sequence defined by
+  Define the $n$-th Fibonacci number $\fib{n}$ as follows.
+  %
+  % Lean can do `n + k` patterns:
+  %
+  % def fib : nat → nat
+  % | 0     := 1
+  % | 1     := 1
+  % | (n+2) := fib (n+1) + fib n
+  %
+  %
+  \begin{fundef}
+    \fib{0} = 0 \\
+    \fib{1} = 1 \\
+    \fib{n + 2} = \fib{n + 1} + \fib{n}
+  \end{fundef}
+
+
+\end{definition}

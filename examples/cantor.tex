@@ -1,0 +1,35 @@
+\begin{theorem}[Cantor]
+  Let $A$ be a set.
+  Let $f ∈ A\to \powerset{A}$.
+  Then $f$ is not surjective.
+\end{theorem}
+
+\begin{proof}
+  Suppose that $f$ is surjective.
+  Let $D = \setOf{a}{a\notin f(a)}$.
+  There exists no $a$ such that $f(a) = D$.
+  Since $f$ is surjective, there exists $a$ such that $f(a) = D$.
+  Contradiction.
+\end{proof}
+
+
+
+\begin{theorem}[Lawvere]
+  Let $C$ be a cartesian closed category.
+  Let $A, X$ be objects of $C$.
+  If there exists a point-surjective morphism $e : A\to \exponential{X}{A}$, % (X^A)
+  then every morphism $f : X\to X$ has a fixed point.
+\end{theorem}
+
+
+% For reference see
+%
+% https://isabelle.in.tum.de/dist/library/HOL/HOL-Isar_Examples/document.pdf
+%
+% https://math.stackexchange.com/questions/214807/non-existence-of-a-surjective-function-from-a-set-to-its-subsets-cantors-theor
+%
+% http://math.andrej.com/2007/04/08/on-a-proof-of-cantors-theorem/
+%
+% https://mathoverflow.net/questions/139645/applications-of-lawveres-fixed-point-theorem
+%
+% https://ncatlab.org/nlab/show/Lawvere%27s+fixed+point+theorem

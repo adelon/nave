@@ -1,0 +1,16 @@
+% Type-theoretical variant of the evergreen Naproche-SAD example.
+% All of the prelims can be skipped with builtins for now.
+
+% This is a slightly simplified version of
+% https://leanprover-community.github.io/mathlib_docs/ring_theory/ideal_operations.html#ideal.quotient_inf_ring_equiv_pi_quotient
+%
+\begin{theorem}[Chinese remainder]
+  Let $R$ be a ring.
+  Let $I,J$ be ideals of $R$.
+  Suppose $I\lub J = R$.
+  %
+  % For ring equivalences see
+  % https://leanprover-community.github.io/mathlib_docs/data/equiv/ring.html#ring_equiv
+  %
+  Then $\quotient{R}{I\times J}\ringEquiv\quotient{R}{I}\times\quotient{R}{J}$.
+\end{theorem}
