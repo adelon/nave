@@ -12,6 +12,8 @@
 -- (by prepending a tilde), so that the applicative translation becomes possible.
 --
 -- https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#extension-ApplicativeDo
+-- https://gitlab.haskell.org/ghc/ghc/-/wikis/applicative-comprehensions
+-- https://mail.haskell.org/pipermail/ghc-devs/2015-October/010065.html
 --
 module Grammar.Concrete where
 
