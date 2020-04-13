@@ -92,8 +92,8 @@ grammar lexicon@Lexicon{..} = mdo
 -- 'unexpected <token>' error.
 --
    attrL       <- rule (attrLOf lexicon term)
-   attrR       <- rule (attrROf lexicon term)
--- attrSuch    <- rule [AttrSuch s | s <- suchStmt]
+   attrSuch    <- rule [AttrSuch s | s <- suchStmt]
+   attrR       <- rule (attrROf lexicon term <|> attrSuch)
    attr        <- rule (attrOf lexicon term)
    verb        <- rule (verbOf lexicon sg term)
    fun         <- rule (funOf lexicon sg term)
