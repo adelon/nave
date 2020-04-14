@@ -165,6 +165,20 @@ data Axiom = Axiom [Asm] Stmt
 data Thm = Thm [Asm] Stmt
    deriving (Show, Eq)
 
+-- The head of the definition describes the part before the `iff`,
+-- i.e. the definiendum. The `Maybe Notion` corresponds to an optional
+-- type annotation for the `Term` of the head. The last part of the head
+-- is the pattern being defined. The `Term` and the pattern being defined
+-- must be 'simple'. This is not enforced syntactically, but with a
+-- separate wf-check. A `Term` is simple if it is an expression that consists
+-- of only a variable. A pattern is simple if it is precisely a pattern of
+-- simple terms. Refer also to `isWfDefn` and to the following example.
+--
+--   'A natural number   $n$        divides $m$   iff   ...'
+--    ^^^^^^^^^^^^^^^^   ^^^        ^^^^^^^^^^^         ^^^
+--    type annotation    term       verb                definiens
+--    (a notion)         (simple)   (simple pattern)    (a statement)
+--
 data DefnHead
    = DefnAttr (Maybe Notion) Term Attr
    | DefnVerb (Maybe Notion) Term Verb
