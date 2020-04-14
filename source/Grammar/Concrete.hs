@@ -193,14 +193,14 @@ grammar lexicon@Lexicon{..} = mdo
 patternOf
    :: (pat -> [Term] -> b)
    -> Lexicon
-   -> (Lexicon -> [pat])
+   -> (Lexicon -> Set pat)
    -> (pat -> Pattern)
    -> Prod r e Tok Term
    -> Prod r e Tok b
 patternOf constr lexicon selector proj arg =
    [constr pat args | ~(args, pat) <- asum (fmap make pats)]
    where
-      pats = selector lexicon
+      pats = Set.toList (selector lexicon)
       make pat = [(args, pat) | args <- go (proj pat)]
       go = \case
          Just w : ws  -> [as | token w, as <- go ws]
@@ -230,12 +230,11 @@ funOf lexicon proj arg = patternOf Fun lexicon lexiconFuns proj arg
 -- the slots, and `var` for the name. The notion patterns are
 -- obtained from `lexicon`.
 --
-namedNominalOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok var
-   -> Prod r e Tok (BaseNotion, var)
+namedNominalOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok var -> Prod r e Tok (BaseNotion, var)
 namedNominalOf lexicon arg var =
    [(BaseNotion pat (args1 <> args2), x) | ~(args1, x, args2, pat) <- asum (fmap make pats)]
    where
-      pats = lexiconNoms lexicon
+      pats = Set.toList (lexiconNoms lexicon)
       make pat =
          let (pat1, pat2) = splitOnPreposition (sg pat)
          in  [(args1, x, args2, pat) | args1 <- go pat1, x <- var, args2 <- go pat2]

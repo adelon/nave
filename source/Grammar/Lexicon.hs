@@ -21,35 +21,35 @@ import qualified Data.List as List
 
 
 data Lexicon = Lexicon
-   { lexiconIdens :: Set Tok
-   , lexiconOperators :: [[(Holey Tok, Associativity)]]
+   { lexiconIdens       :: Set Tok
+   , lexiconOperators   :: [[(Holey Tok, Associativity)]]
    , lexiconConnectives :: [[(Holey Tok, Associativity)]]
-   , lexiconRelators :: Set Relator
-   , lexiconVerbs :: [SgPl Pattern]
-   , lexiconAttrLs :: [Pattern]
-   , lexiconAttrRs :: [Pattern]
-   , lexiconNoms :: [SgPl Pattern]
-   , lexiconFuns :: [SgPl Pattern]
+   , lexiconRelators    :: Set Relator
+   , lexiconVerbs       :: Set (SgPl Pattern)
+   , lexiconAttrLs      :: Set Pattern
+   , lexiconAttrRs      :: Set Pattern
+   , lexiconNoms        :: Set (SgPl Pattern)
+   , lexiconFuns        :: Set (SgPl Pattern)
    } deriving (Show, Eq)
 
--- Combined projection of both left and right attributes.
+-- Projection returning the union of both left and right attributes.
 --
-lexiconAttr :: Lexicon -> [Pattern]
+lexiconAttr :: Lexicon -> Set Pattern
 lexiconAttr lexicon = lexiconAttrLs lexicon <> lexiconAttrRs lexicon
 
 
 
 builtins :: Lexicon
 builtins = Lexicon
-   { lexiconIdens = builtinIdens
-   , lexiconOperators = builtinOperators
+   { lexiconIdens       = builtinIdens
+   , lexiconOperators   = builtinOperators
    , lexiconConnectives = builtinConnectives
-   , lexiconRelators = builtinRelators
-   , lexiconAttrLs = builtinAttrLs
-   , lexiconAttrRs = builtinAttrRs
-   , lexiconVerbs = builtinVerbs
-   , lexiconNoms = builtinNominals
-   , lexiconFuns = builtinFuns
+   , lexiconRelators    = builtinRelators
+   , lexiconAttrLs      = builtinAttrLs
+   , lexiconAttrRs      = builtinAttrRs
+   , lexiconVerbs       = builtinVerbs
+   , lexiconNoms        = builtinNominals
+   , lexiconFuns        = builtinFuns
    }
 
 -- Identifiers.
@@ -107,8 +107,8 @@ binOp :: Tok -> Holey Tok
 binOp tok = [Nothing, Just tok, Nothing]
 
 
-builtinAttrLs :: [Pattern]
-builtinAttrLs = fmap unsafeReadPattern
+builtinAttrLs :: Set Pattern
+builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
    [ "associative"
    , "even"
    , "injective"
@@ -119,31 +119,31 @@ builtinAttrLs = fmap unsafeReadPattern
    , "reflexive"
    , "surjective"
    , "transitive"
-   ]
+   ])
 
-builtinAttrRs :: [Pattern]
-builtinAttrRs = fmap unsafeReadPattern
+builtinAttrRs :: Set Pattern
+builtinAttrRs = Set.map unsafeReadPattern (Set.fromList
    [ "coprime to ?"
    , "of finite order"
    , "of finite type"
    , "pointwise bounded by ? on ?"
-   ]
+   ])
 
 
-builtinVerbs :: [SgPl Pattern]
-builtinVerbs = fmap unsafeReadPatternSgPl
+builtinVerbs :: Set (SgPl Pattern)
+builtinVerbs = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "converge[s/]"
    , "divide[s/] ?"
    , "equal[s/] ?"
    , "agree[s/] with ? on ?"
-   ]
+   ])
 
 
 -- Some of these do/should correspond to mathlib structures,
 -- e.g.: lattice, complete lattice, ring, etc.
 --
-builtinNominals :: [SgPl Pattern]
-builtinNominals = fmap unsafeReadPatternSgPl
+builtinNominals :: Set (SgPl Pattern)
+builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "lattice[/s]"
    , "complete lattice[/s]"
    , "natural number[/s]"
@@ -158,16 +158,16 @@ builtinNominals = fmap unsafeReadPatternSgPl
    , "seminorm[/s] on ?"
    , "subspace[/s] of ?"
    , "vector space[/s] over ?"
-   ]
+   ])
 
 
-builtinFuns :: [SgPl Pattern]
-builtinFuns = fmap unsafeReadPatternSgPl
+builtinFuns :: Set (SgPl Pattern)
+builtinFuns = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "derivative[/s] of ?"
    , "successor[/s] of ?"
    , "infim[um/a] of ?"
    , "set[/s] of fixed points of ?"
-   ]
+   ])
 
 
 -- Naïve splitting of patterns at the first preposition.
