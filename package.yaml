@@ -20,6 +20,8 @@ dependencies:
   - text
   - transformers
   - unordered-containers
+  - pretty-simple
+
 
 default-extensions:
   - ApplicativeDo

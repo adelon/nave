@@ -9,9 +9,11 @@ import Scan
 import System.Directory (createDirectoryIfMissing, getDirectoryContents)
 import Text.Earley (parser, fullParses)
 import Text.Megaparsec
+import Text.Pretty.Simple (pShowNoColor)
 
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
+import qualified Data.Text.Lazy.IO as LazyText
 
 main :: IO ()
 main = do
@@ -50,7 +52,7 @@ work file = do
          --
          -- Write the parse tree to a file.
          let parseResult = fullParses (parser (grammar builtins)) simpleStream
-         Text.writeFile outPath (Text.pack (show parseResult))
+         LazyText.writeFile outPath (pShowNoColor parseResult)
 
 
 dumpTokens :: TokStream -> Text
