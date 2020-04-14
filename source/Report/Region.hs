@@ -1,9 +1,5 @@
 module Report.Region where
 
-https://gitlab.haskell.org/ghc/ghc/-/merge_requests/2626
-
-
-https://hackage.haskell.org/package/pretty-simple-3.2.2.0/docs/Text-Pretty-Simple.html
 
 import Base
 
