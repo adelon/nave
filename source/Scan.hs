@@ -26,7 +26,7 @@ scanner = do
 -- An expression consisting of a just a variable. They represent slots
 -- of patterns which are represented by `Nothing`.
 -- vvv
-   var  <- rule [Nothing | math (terminal maybeVarTok)]
+   var <- rule [Nothing | math (terminal maybeVarTok)]
 --
 -- A word, command, or grouping occuring within a pattern.
 -- vvv
@@ -34,14 +34,14 @@ scanner = do
 --
 -- A complete `Pattern`, consisting of variable slots and pattern tokens.
 -- vvv
-   pat <- rule [p | p <-  many1_ (var <|> word)]
+   pat <- rule [p | p <- many1_ (var <|> word)]
 --
 -- Concrete patterns. The leading var and following keywords (`_is`/`_is, _an`)
 -- serve to differentiate the different kinds of patterns.
 -- vvvv
-   attr   <- rule [p | var, _is, p <-  pat, _iff]
-   notion <- rule [p | var, _is, _an, p <-  pat, _iff]
-   verb   <- rule [p | var, p <-  pat, _iff]
+   attr   <- rule [p | var, _is, p <- pat, _iff]
+   notion <- rule [p | var, _is, _an, p <- pat, _iff]
+   verb   <- rule [p | var, p <- pat, _iff]
    new    <- rule (attr <|> notion <|> verb)
 --
 -- We only care about the pattern content of definitions, and not the rest of the definition.

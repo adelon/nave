@@ -174,7 +174,7 @@ grammar lexicon@Lexicon{..} = mdo
    instrLet  <- rule [InstrAsm a | optional _throughout, a <- asm]
 -- instrUse  <- rule [InstrUse i | optional _throughout, a <- use]
 
-   paraAxiom <- rule [ParaAxiom tag p | ~(tag, p)  <- env "axiom" axiom]
+   paraAxiom <- rule [ParaAxiom tag p | ~(tag, p) <- env "axiom" axiom]
    paraThm   <- rule [ParaThm tag p | ~(tag, p) <- env "theorem" thm]
    paraProof <- rule [ParaProof tag p | ~(tag, p) <- env "proof" proof]
    paraDefn  <- rule [ParaDefn p | p <- env_ "definition" defn]

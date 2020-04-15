@@ -268,7 +268,7 @@ patternSpec = do
    segments <- rule [makePattern (s:ss) | s <- segment, ss <- many (space *> segment)]
    pure segments
    where
-      makePattern :: [Maybe String] ->  Pattern
+      makePattern :: [Maybe String] -> Pattern
       makePattern pat = fmap makeWord pat
 
 
