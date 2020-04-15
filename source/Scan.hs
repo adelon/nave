@@ -7,22 +7,56 @@ module Scan where
 
 import Base
 import Grammar.Abstract
-import Grammar.Concrete (env_)
+import Grammar.Concrete (env_, math, maybeVarTok)
 import Grammar.Literals
 
-import Text.Earley (Grammar, Prod, rule, satisfy)
+
+import Text.Earley (Grammar, Prod, rule, satisfy, terminal)
 import qualified Data.Set as Set
 
 
 
-
-scanner :: Grammar r (Prod r String Tok [[Tok]])
+-- The scanner is a grammar that picks out patterns from a document,
+-- producing a list of all patterns. For use in the lexicon, singular
+-- and plural forms still need to be derived for some patterns.
+--
+scanner :: Grammar r (Prod r String Tok [Pattern])
 scanner = do
-   adjPat <- rule [p | _is, p <-  many1_ patToken, _iff]
-   pat    <- rule (adjPat)
-   defn   <- rule (env_ "definition" [p | many notDefnToken, p <- pat, many notDefnToken])
-   doc    <- rule [ds | many notDefnToken, ds <- many defn, many notDefnToken]
+--
+-- An expression consisting of a just a variable. They represent slots
+-- of patterns which are represented by `Nothing`.
+-- vvv
+   var  <- rule [Nothing | math (terminal maybeVarTok)]
+--
+-- A word, command, or grouping occuring within a pattern.
+-- vvv
+   word <- rule [Just w | w <- patToken ]
+--
+-- A complete `Pattern`, consisting of variable slots and pattern tokens.
+-- vvv
+   pat <- rule [p | p <-  many1_ (var <|> word)]
+--
+-- Concrete patterns. The leading var and following keywords (`_is`/`_is, _an`)
+-- serve to differentiate the different kinds of patterns.
+-- vvvv
+   attr   <- rule [p | var, _is, p <-  pat, _iff]
+   notion <- rule [p | var, _is, _an, p <-  pat, _iff]
+   verb   <- rule [p | var, p <-  pat, _iff]
+   new    <- rule (attr <|> notion <|> verb)
+--
+-- We only care about the pattern content of definitions, and not the rest of the definition.
+-- vvvv
+   defn <- rule (env_ "definition" [p | many notDefnToken, p <- new, many notDefnToken])
+--
+-- A version of `defn` that consumes all trailing tokens until the next `defn`.
+-- vvvvv
+   defn_ <- rule [p | p <- defn, many notDefnToken]
+--
+-- Strip all tokens before the first `defn_`, then collect all patterns from `defn_`s.
+-- vvv
+   doc <- rule [ps | many notDefnToken, ps <- many defn_]
    pure doc
+
 
 notDefnToken :: Prod r e Tok Tok
 notDefnToken = satisfy \case
@@ -59,4 +93,4 @@ patToken = satisfy \case
    --
    _token       -> False
    where
-      keywords = Set.fromList ["is", "are", "if", "iff"]
+      keywords = Set.fromList ["a", "an", "is", "are", "if", "iff"]
