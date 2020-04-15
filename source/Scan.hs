@@ -15,15 +15,21 @@ import Text.Earley (Grammar, Prod, rule, satisfy, terminal)
 import qualified Data.Set as Set
 
 
+data ScanPattern
+   = ScanAttr Pattern
+   | ScanFun Pattern
+   | ScanNotion Pattern
+   | ScanVerb Pattern
+   deriving (Show, Eq)
 
 -- The scanner is a grammar that picks out patterns from a document,
 -- producing a list of all patterns. For use in the lexicon, singular
 -- and plural forms still need to be derived for some patterns.
 --
-scanner :: Grammar r (Prod r String Tok [Pattern])
+scanner :: Grammar r (Prod r String Tok [ScanPattern])
 scanner = do
 --
--- An expression consisting of a just a variable. They represent slots
+-- An expression consisting of a just a variable. They function as slots
 -- of patterns which are represented by `Nothing`.
 -- vvv
    var <- rule [Nothing | math (terminal maybeVarTok)]
@@ -38,15 +44,15 @@ scanner = do
 --
 -- Concrete patterns. The leading var and following keywords (`_is`/`_is, _an`)
 -- serve to differentiate the different kinds of patterns.
--- vvvv
-   attr   <- rule [p | var, _is, p <- pat, _iff]
-   notion <- rule [p | var, _is, _an, p <- pat, _iff]
-   verb   <- rule [p | var, p <- pat, _iff]
-   new    <- rule (attr <|> notion <|> verb)
+-- vvvvvv
+   attr   <- rule [ScanAttr p | var, _is, p <- pat, _iff]
+   notion <- rule [ScanNotion p | var, _is, _an, p <- pat, _iff]
+   verb   <- rule [ScanVerb p | var, p <- pat, _iff]
+   scan   <- rule (attr <|> notion <|> verb)
 --
 -- We only care about the pattern content of definitions, and not the rest of the definition.
 -- vvvv
-   defn <- rule (env_ "definition" [p | many notDefnToken, p <- new, many notDefnToken])
+   defn <- rule (env_ "definition" [p | many notDefnToken, p <- scan, many notDefnToken])
 --
 -- A version of `defn` that consumes all trailing tokens until the next `defn`.
 -- vvvvv
