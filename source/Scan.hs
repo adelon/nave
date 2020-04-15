@@ -29,7 +29,7 @@ data ScanPattern
 scanner :: Grammar r (Prod r String Tok [ScanPattern])
 scanner = do
 --
--- An expression consisting of a just a variable. They function as slots
+-- An expression consisting of a just a variable. They mark slots
 -- of patterns which are represented by `Nothing`.
 -- vvv
    var <- rule [Nothing | math (terminal maybeVarTok)]

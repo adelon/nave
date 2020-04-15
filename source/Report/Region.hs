@@ -45,19 +45,23 @@ compareLine = compare `on` positionLine
 data Region
    = Region Position Position Indicator
 --          ^^^^^^^^ ^^^^^^^^ ^^^^^^^^^
---          Start    End
+--          Start    End      Hint for pretty-printing the region
 --
 -- Source regions are indicated by start and end position.
 -- The start is inclusive, the end is exclusive. Thus below
 --
---    1 3 5 7 9
---    -----------
--- 1| Hey Hello
--- 2|
+--                 1         2         3
+--       1 3 5 7 9 1 3 5 7 9 1 3 5 7 9 1 3 5 7
+--       -------------------------------------
+--    1|     #####
+--    2|                   %%%%%%%%%%%%%%%%%%%
+--    3| %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+--    4| %%%%
 --
--- the word 'Hello' has the region `1:5-1:10`. This has the nice property
+-- the hash signs (#) fill the region `1:5-1:10` (a single line) and the
+-- percent signs (%) fill the region `2:19-4:5` (a multiline). Note that
 -- that the length of the region is equal to the difference of the columns
--- if the region is on the same line. The start position must be strictly
+-- if the region is a single line. The start position must be strictly
 -- less than the end position of the region.
 --
    | Nowhere
@@ -105,10 +109,3 @@ data Indicator
 --              Length of the region within that line.
 --
    deriving (Show, Eq, Ord)
-
--- length :: Region -> Length
--- length = \case
---    Nowhere -> WasNowhere
---    Region s e -> case compareLine s e of
---       EQ -> SameLine (positionColumn e - positionColumn s)
---       _  -> DifferentLine
