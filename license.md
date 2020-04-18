@@ -1,4 +1,4 @@
-## BSD-2-Clause + Patents License
+## BSD 2-Clause + Patents License
 
 Copyright © 2020
 
