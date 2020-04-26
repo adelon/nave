@@ -102,14 +102,6 @@ data Term
 
 data Conj = If | And | Or | Iff deriving (Show, Eq, Ord)
 
-data Quant
-   = ForAll
-   | ForAlmostAll
-   | Exists
-   | ExistsUnique
-   | ExistsNot
-   deriving (Show, Eq, Ord)
-
 data Stmt
    = StmtFormula Formula
    | StmtNeg Stmt
@@ -118,17 +110,17 @@ data Stmt
    | StmtNotion Term Notion
    | StmtExists Notion
    | StmtConj Conj Stmt Stmt
-
-   -- The `Maybe Stmt`s in quantifications are additional constraints
-   -- on the variable (such-that-constraints). They do not occur in
-   -- existential quantifications.
-   --
-   -- Plain quantifications have completely unbounded variables
-   -- e.g.: 'for all <vs> such that <s1> we have <s2>' => All vs s1 s2
-   --
-   -- The `Nom` variants have variables bounded by a notion.
-   -- e.g.: 'for all natural numbers $m,n$ ...'
-   --
+--
+-- The `Maybe Stmt`s in quantifications are additional constraints
+-- on the variable (such-that-constraints). They do not occur in
+-- existential quantifications.
+--
+-- Plain quantifications have completely unbounded variables
+-- e.g.: 'for all <vs> such that <s1> we have <s2>' => All vs s1 s2
+--
+-- The `Nom` variants have variables bounded by a notion.
+-- e.g.: 'for all natural numbers $m,n$ ...'
+--
    | All (NonEmpty Var) (Maybe Stmt) Stmt
    | AllNotion Notion (NonEmpty Var) (Maybe Stmt) Stmt
    | AllIn (NonEmpty Var) Formula (Maybe Stmt) Stmt
@@ -144,11 +136,7 @@ data Stmt
 
    | Uniq (NonEmpty Var) Stmt
    | UniqNotion Notion (NonEmpty Var) Stmt
-   --
-   -- 'for all $k\in\integers$'
-   | StmtQuantIn Quant (NonEmpty Var) Formula (Maybe Stmt) Stmt
    deriving (Show, Eq, Ord)
-
 
 
 data Asm
