@@ -25,3 +25,4 @@ cabal.project.local~
 *.cabal
 stack.yaml.lock
 debug/
+z3/

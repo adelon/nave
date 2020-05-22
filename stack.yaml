@@ -1,4 +1,19 @@
 resolver: lts-14.21
 
 extra-deps:
-- comprehensions-ghc-0.1.0.1
+  - Agda-2.6.1
+  - comprehensions-ghc-0.1.0.1
+  - z3-408.0
+# extra packages for Agda:
+  - data-hash-0.2.0.1
+  - equivalence-0.3.5
+  - geniplate-mirror-0.7.7
+  - regex-tdfa-1.3.1.0
+  - STMonadTrans-0.4.4
+  - regex-base-0.94.0.0
+
+extra-include-dirs:
+  - ./z3/include
+
+extra-lib-dirs:
+  - ./z3/bin
