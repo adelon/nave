@@ -25,3 +25,5 @@ cabal.project.local~
 *.cabal
 stack.yaml.lock
 debug/
+*.out
+*.lean

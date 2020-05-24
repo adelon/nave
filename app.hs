@@ -5,6 +5,7 @@ import Grammar.Concrete
 import Grammar.Lexicon (builtins)
 import Lex
 import Scan
+import Export.Lean (export)
 
 import System.Directory (createDirectoryIfMissing, getDirectoryContents)
 import Text.Earley (parser, fullParses)
@@ -32,6 +33,7 @@ work :: FilePath -> IO ()
 work file = do
    let inPath = "examples/" <> file
    let outPath = "examples/" <> file <> ".out"
+   let leanPath = "examples/" <> file <> ".lean"
    let tokPath = "debug/" <> file <> ".tokens"
    let scanPath = "debug/" <> file <> ".scans"
    putStrLn ("Parsing '" <> inPath <> "'.")
@@ -53,6 +55,11 @@ work file = do
          -- Write the parse tree to a file.
          let parseResult = fullParses (parser (grammar builtins)) simpleStream
          LazyText.writeFile outPath (pShowNoColor parseResult)
+         --
+         -- Translate to lean.
+         case fst parseResult of
+           [] -> pure ()
+           (ps:_) -> Text.writeFile leanPath (export ps builtins)
 
 
 dumpTokens :: TokStream -> Text
