@@ -1,0 +1,14 @@
+% For comparsion, see this Lean formalization:
+%
+% https://github.com/ramonfmir/lean-scheme/blob/master/src/scheme.lean
+% https://www.imperial.ac.uk/media/imperial-college/faculty-of-engineering/computing/public/1819-ug-projects/Fernandez-I-MirR-Schemes-in-Lean.pdf
+%
+\begin{structure}
+   A scheme is a locally ringed space $X$ such that
+   %there exists an open affine covering $U$ of $X$ such that
+   $X$ admits a covering $(X_i)_{i ∈ I}$ such that
+   for every $i$ there exists a ring $R$
+   and an open immersion $f : \Spec{R}\to\structuresheaf{X}$ such that
+   $\range{f} = X_i$ and $$
+
+\end{structure}

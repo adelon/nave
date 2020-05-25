@@ -21,6 +21,8 @@ dependencies:
   - transformers
   - unordered-containers
   - pretty-simple
+  - Agda
+  - typed-process
 
 
 default-extensions:

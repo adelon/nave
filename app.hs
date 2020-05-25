@@ -11,6 +11,7 @@ import Text.Earley (parser, fullParses)
 import Text.Megaparsec
 import Text.Pretty.Simple (pShowNoColor)
 
+
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy.IO as LazyText

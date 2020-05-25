@@ -1,4 +1,12 @@
 resolver: lts-14.21
 
 extra-deps:
-- comprehensions-ghc-0.1.0.1
+  - Agda-2.6.1
+  - comprehensions-ghc-0.1.0.1
+  # extra deps for Agda
+  - data-hash-0.2.0.1@sha256:0277d99cb8b535ecc375c59e55f1c91faab966d9167a946ef18445dd468ba727,1135
+  - equivalence-0.3.5@sha256:aedbd070b7ab5e58dd1678cd85607bc33cb9ff62331c1fa098ca45063b3072db,1626
+  - geniplate-mirror-0.7.7@sha256:6a698c1bcec25f4866999001c4de30049d4f8f00ec83f8930cda2f767489c637,1106
+  - regex-base-0.94.0.0@sha256:44aa95ca762294ffbb28cf0af9c567d93b5d2c56e4f38ce5385a257d899f968e,2253
+  - regex-tdfa-1.3.1.0@sha256:bec13812a56a904ff3510caa19fe1b3ce3939e303604b1bcb3162771c52311ba,6324
+  - STMonadTrans-0.4.4@sha256:437eec4fdf5f56e9cd4360e08ed7f8f9f5f02ff3f1d634a14dbc71e890035387,1946
