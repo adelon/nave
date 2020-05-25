@@ -14,9 +14,17 @@ import Control.Monad.Reader
 import qualified Data.Text as Text
 
 
-type TranslM a = Reader TranslEnv a
+type TranslM a = Reader TranslContext a
 
-data TranslEnv = TranslEnv
+data TranslContext = TranslContext
+-- TODO
+-- The translation environment provides
+-- a `Map` of builtin definitions, mapping builtins
+-- to Agda identifiers.
+--
+-- There may be some other use cases as well
+-- (variable naming, managing scopes). The
+-- `Reader` monad should suffice for now.
 
 class ToAgda a c | a -> c where
    toAgda :: a -> TranslM c
@@ -38,4 +46,5 @@ instance ToAgda Expr AConc.Expr where
 
 mkQName :: Text -> AConc.QName
 mkQName x = AConc.QName (AConc.Name APos.NoRange AConc.InScope x')
-   where x' = [AConc.Id (Text.unpack x)]
+   where
+      x' = [AConc.Id (Text.unpack x)]
