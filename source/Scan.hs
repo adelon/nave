@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fplugin=Comprehension.Plugin #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 -- Pattern scanning for manual definitions from the preamble and for
 -- automatic pattern recognition from definitions in the document.

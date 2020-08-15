@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 -- This module defines lots of keywords, introduction sequences
 -- and various filler phrases. Collectively we call them 'literals'.
