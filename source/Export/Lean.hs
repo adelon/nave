@@ -41,7 +41,8 @@ export doc regis = evalState exporting (ExportState 0 [] regis 0)
    exporting :: State ExportState Text
    exporting = renderStrict <$> layoutCompact <$> do
       doc' <- exportDocument doc
-      pure $ vsep [pretty preamble, line, doc']
+      pure $ vsep [-- pretty preamble,
+                  line, doc']
 
 exportDocument :: [Para] -> State ExportState (Doc a)
 exportDocument decls = vsep <$> toList <$> traverse exportDeclaration decls
@@ -55,14 +56,65 @@ exportDeclaration = \case
    InstrAsm asm -> pure ""
    InstrUse -> pure "" -- TODO: Imports
 
--- patAsText :: Pattern -> Text
--- patAsText = Text.intercalate "_" . filter (/="") . map (\case Word w -> w; Slot -> "")
+getNameFromPattern :: Pattern -> State ExportState Text
+getNameFromPattern = go False ""
+  where
+    go us t [] = pure t
+    go us t (Nothing : ps) = go us t ps -- we render holes in a pattern as nothing special
+    go us t (Just (Word p) : ps) = go True (add_ us p <> t) ps
+    go us t (Just (Symbol p) : ps) = go False (p <> t) ps
+    go us t (Just (Number p) : ps) = go False (p <> t) ps
+    go us t (Just p : ps) = warn ("Ignored token in pattern: " <> Text.pack (show p)) >> go us t ps
 
-getNameFromPredicateHead :: DefnHead -> Text
+    add_ True = ("_" <>)
+    add_ False = id
+
+-- | Get the name of the singular from a pattern.
+getNameFromPredicateHead :: DefnHead -> State ExportState Text
 getNameFromPredicateHead = \case
-  DefnAttr mn term (Attr pat terms) -> ""
-  DefnVerb mn term (Verb (SgPl pat1 pat2) terms) -> ""
-  DefnNotion mn term (Notion ls (BaseNotion (SgPl pat1 pat2) terms) rm) -> ""
+  DefnAttr mn term (Attr pat terms) -> getNameFromPattern pat
+  DefnVerb mn term (Verb (SgPl pat1 pat2) terms) -> getNameFromPattern pat1
+  DefnNotion mn term (Notion ls (BaseNotion (SgPl pat1 pat2) terms) rm) -> getNameFromPattern pat1
+
+data LeanVarKind = Implicit (Maybe (Last Text)) | Normal (Maybe (Last Text))
+
+data Lean = LVar Text LeanVarKind
+  | LPrefixApp Lean Lean  -- LPrefixApp "f" "a"
+  | LInfixApp Text Lean Lean -- LInfixApp "+" "a" "b"
+  | LNumber Text
+  | LSymbol Text -- we will just copy symbols into the Lean code for now
+  | LConj [Lean] -- to handle the chain: k divides 1, n
+
+extractExpr :: Expr -> State ExportState Lean
+extractExpr (ExprVar (Var v)) = pure $ LVar v (Normal Nothing)
+extractExpr (ExprConst t) = do
+  t' <- getNameFromPattern [Just t]
+  pure $ LSymbol t'
+extractExpr (ExprNumber t) = pure $ LNumber t
+extractExpr (ExprOp op es) = do
+    op' <- getNameFromPattern op
+    es' <- mapM extractExpr es
+    pure $ foldl' LPrefixApp (LSymbol op') es'
+extractExpr (ExprParen e) = extractExpr e
+extractExpr (ExprApp e1 e2) = LPrefixApp <$> extractExpr e1 <*> extractExpr e2
+
+extractChain :: Chain -> State ExportState Lean
+extractChain (ChainBase (e :| es)) = LConj <$> mapM extractExpr (e : es)
+extractChain (ChainCons (e :| es) r c) = spread <$> (go r [e : es] c >>= conv)
+  where
+    go r vars (ChainBase (e :| es)) = pure (r, (e : es) : vars)
+    go r vars (ChainCons (e :| es) r' c) = do
+      when (r /= r') $ warn $ "Conflicting relators in chain: " <> Text.pack (show r) <> " and " <> Text.pack (show r') <> ". Aborting."
+      go r ((e : es) : vars) c
+
+    conv = mapM (mapM (mapM extractExpr))
+
+    spread (r, []) = error "can't happen"
+    spread (r, es) = 
+      let f = case r of
+            Word w -> foldl' LPrefixApp (LSymbol w)
+            Symbol w -> foldl1 (LInfixApp w)
+      in LConj $ map f $ foldl' (\l e -> [e':l' | l' <- l, e' <- e]) [[]] es
 
 -- splitAssumptions :: [Assumption] -> ([Typing Var Typ], [Statement])
 -- splitAssumptions = go ([], [])
@@ -71,7 +123,6 @@ getNameFromPredicateHead = \case
     -- go (ts, ss) ((AssumptionPretyping ns):xs) = go (ts ++ toList ns, ss) xs
     -- go (ts, ss) ((Assumption s):xs) = go (ts, ss ++ [s]) xs
 
--- data LeanVar = Implicit (Maybe (Last Typ)) | Normal (Maybe (Last Typ))
 
 -- instance Semigroup LeanVar where
   -- Implicit m1 <> Implicit m2 = Implicit (m1 <> m2)
@@ -113,8 +164,8 @@ getNameFromPredicateHead = \case
 
 exportDefinition :: Defn -> State ExportState (Doc ann)
 exportDefinition (Defn asms dhead stmt) = do
-  let name = getNameFromPredicateHead dhead
-  pure ""
+  name <- getNameFromPredicateHead dhead
+  pure $ viaShow (Defn asms dhead stmt)
   -- sig <- exportSignature (varsInPatt ph) asms stmt "Prop"
   -- r <- gets registry
   -- pure $ hsep $ ["def", pretty name, sig, ":=", exportProp r stmt]
