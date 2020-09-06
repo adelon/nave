@@ -127,14 +127,14 @@ grammar lexicon@Lexicon{..} = mdo
 
    suchStmt <- rule [s | _suchThat, s <- stmt, optional _comma]
 
-   all       <- rule [All xs b s | _all <|> _every, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
-   allNotion <- rule [AllNotion n xs b s | _every, n <- notion, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
+   all       <- rule [All xs Nothing b s | _all <|> _every, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
+   allNotion <- rule [All xs (Just n) b s | _every, n <- notion, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
 
-   some       <- rule [Some xs s | _exists, xs <- math vars, _suchThat, s <- stmt]
-   someNotion <- rule [SomeNotion n (pure x) s | _exists, _an, ~(n, x) <- notionVar, _suchThat, s <- stmt]
+   some       <- rule [Some xs Nothing s | _exists, xs <- math vars, _suchThat, s <- stmt]
+   someNotion <- rule [Some (pure x) (Just n) s | _exists, _an, ~(n, x) <- notionVar, _suchThat, s <- stmt]
 
-   none        <- rule [None xs s | _exists, _no, xs <- math vars, _suchThat, s <- stmt]
-   noneNotion  <- rule [NoneNotion n xs s | _exists, _no, n <- notion, xs <- math vars, _suchThat, s <- stmt]
+   none        <- rule [None xs Nothing s | _exists, _no, xs <- math vars, _suchThat, s <- stmt]
+   noneNotion  <- rule [None xs (Just n) s | _exists, _no, n <- notion, xs <- math vars, _suchThat, s <- stmt]
 
    stmtQuant       <- rule (all <|> some <|> none)
    stmtQuantNotion <- rule (allNotion <|> someNotion <|> noneNotion)
