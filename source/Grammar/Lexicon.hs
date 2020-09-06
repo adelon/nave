@@ -9,6 +9,7 @@
 -- for the concrete grammar. This representation makes inspection and
 -- extension easier.
 --
+
 module Grammar.Lexicon where
 
 

@@ -10,6 +10,7 @@
 -- (α, β, γ, ..., 𝔸, 𝔹, ℂ, ...). Similarly, `\begin{...}` and `\end{...}` commands
 -- are parsed as a single token.
 --
+
 module Lex
    ( Tok(..)
    , Delim(..)

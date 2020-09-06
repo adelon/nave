@@ -5,6 +5,7 @@
 -- so that it is obvious that this module is used. Commonly used data types
 -- or helper functions from outside of `base` are also included.
 --
+
 module Base (module Base, module Export) where
 
 -- Some definitions from `base` need to be hidden to avoid clashes.
