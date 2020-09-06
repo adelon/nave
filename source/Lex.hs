@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 -- This module defines the lexer and its associated data types.
 -- The lexer takes `Text` as input and produces a stream of tokens
 -- annotated with positional information. This information is bundled

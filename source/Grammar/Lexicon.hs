@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 -- The `Lexicon` describes the part of the grammar that extensible/dynamic.
 -- It starts with built-ins based on Lean's `stdlib` and `mathlib`.
 -- It be extended by the user.

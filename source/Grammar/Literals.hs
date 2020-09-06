@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 -- This module defines lots of keywords, introduction sequences
 -- and various filler phrases. Collectively we call them 'literals'.
@@ -103,8 +104,8 @@ _write = (optional (w "we") *> w "say" <* optional (w "that")) <|> (optional (w 
 
 
 
-_in = token (Symbol "∈") <|> token (Command "in") <?> "∈"
-_eq = token (Symbol "=") <?> "="
-_defeq = token (Symbol ":=") <?> ":=" -- Should use `\coloneq` from unicode-math as display.
-_dot = token (Symbol ".") <?> "."
-_comma = token (Symbol ",") <?> ","
+_in = token (Symbol "∈") <|> token (Command "in") <?> ("∈" :: String)
+_eq = token (Symbol "=") <?> ("=" :: String)
+_defeq = token (Symbol ":=") <?> (":=" :: String) -- Should use `\coloneq` from unicode-math as display.
+_dot = token (Symbol ".") <?> ("." :: String)
+_comma = token (Symbol ",") <?> ("," :: String)

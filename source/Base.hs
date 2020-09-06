@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 -- A basic prelude intended to reduce the amount of repetitive imports.
 -- Mainly consists of re-exports from `base` modules, via `BasePrelude`.
 -- Intended to be imported explicitly (but with `NoImplicitPrelude` enabled)
