@@ -1,0 +1,69 @@
+% Based on https://www.sciencedirect.com/science/article/pii/S1571066118300719?via%3Dihub
+
+
+% Missing universe polymorphism at the moment
+
+
+% Suggested notation
+
+% \apart = \not\approx
+% \incident = \in
+% \notincident = \not\in
+
+
+% Setoid setup.
+
+\begin{theorem}[Irreflexive relation]
+   Let $A$ be a set.
+   A relation $\sim$ on $A$ is irreflexive when
+   for every $x\in A$ it is not the case that $x \sim x$.
+ \end{theorem}
+
+ \begin{theorem}[Symmetric relation]
+   Let $A$ be a set.
+   A relation $\sim$ on $A$ is symmetric when
+   % $\forall a, b: a\sim b \implies b\sim a$.
+   for every $x,y \in A$ we have that $x\sim y$ implies $y\sim x$.
+\end{theorem}
+
+\begin{theorem}[Cotransitive relation]
+   Let $A$ be a set.
+   A relation $\sim$ on $A$ is cotranstive when
+   for every $x,y,z\in A$, if $x\sim y$ then $z\sim x$ or $z\sim y$.
+ \end{theorem}
+
+\begin{define-relation}[Apartness relation]
+   Let $A$ be a set.
+   An apartness relation on $A$ is a relation $\apart$ on $A$
+   such that
+   \begin{itemize}
+      \item $\apart$ is irreflexive.
+      \item $\apart$ is symmetric.
+      \item $\apart$ is cotransitive.
+   \end{itemize}
+ \end{define-relation}
+
+
+% ...
+
+% https://en.wikipedia.org/wiki/Incidence_structure
+ \begin{theorem}[Incidence structure]
+   An incidence structure consists of of
+   \begin{itemize}
+      \item a set $P$, called \textit{points}
+      \item a set $L$, called \textit{lines}
+      \item a relation $\incident$ between points and lines, called \textit{incidence relation}
+   \end{itemize}
+\end{theorem}
+
+
+\begin{theorem}[Projective plane]
+   The projective plane is an incidence structure $(P, L, \incident)$
+   satisfying the following axioms:
+   \begin{enumerate}
+      \item ...
+   \end{enumerate}
+\end{theorem}
+
+
+% PG(2,2),  Fano plane

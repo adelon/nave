@@ -16,6 +16,7 @@ import BasePrelude as Export hiding
    , group, bracket
    )
 
+import Data.Map as Export (Map)
 import Data.Set as Export (Set)
 import Data.Text as Export (Text)
 import Data.Containers.ListUtils as Export (nubOrd) -- Much faster than `nub`.
@@ -42,3 +43,9 @@ many1 a = NonEmpty.fromList <$> Applicative.some a
 -- Discards the type information that the result is `NonEmpty`.
 many1_ :: Alternative f => f a -> f [a]
 many1_ = Applicative.some
+
+
+-- Should be used for braches that are unreachable or impossible states. 
+-- Allows searching for 'error' while ignoring impossible branches.
+impossible :: String -> a
+impossible = error
