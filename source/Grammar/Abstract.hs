@@ -114,9 +114,9 @@ data Stmt
 -- A quantification binds a nonempty list of variables.
 --
 -- The `Maybe Notion` is an optional typing.
--- 
+--
 -- The `Maybe Stmt`s in universal quantifications are additional constraints
--- on the variable (such-that-constraints). They do not occur in existential 
+-- on the variable (such-that-constraints). They do not occur in existential
 -- quantifications, since 'such that' is used differently there.
 --
    | All  (NonEmpty Var) (Maybe Notion) (Maybe Stmt) Stmt
@@ -126,7 +126,7 @@ data Stmt
    | Uniq (NonEmpty Var) (Maybe Notion) Stmt
 --
 -- Missing generalized bounded quantifications: for all k < n ...
--- 
+--
    deriving (Show, Eq, Ord)
 
 
@@ -168,7 +168,6 @@ data Defn
    = Defn [Asm] DefnHead Stmt
    deriving (Show, Eq)
 
-
 -- Well-formedness check for definitions.
 -- The following conditions need to be met.
 --
@@ -203,6 +202,19 @@ data ProofStep
    | ProofSubGoal Stmt Proof Stmt
    deriving (Show, Eq)
 
+
+
+data Theory = Theory
+   { theoryDefines :: Notion
+   , theoryExtends :: Notion
+   , theoryExtendsVar :: Maybe Var
+   , theoryHas :: [(Text, Expr)] -- Text is the name of the command.
+   , theorySatisfies :: [Stmt]
+   } deriving (Show, Eq)
+
+
+
+
 data Proof
    = Proof [ProofStep]
    deriving (Show, Eq)
@@ -215,6 +227,7 @@ data Para
    | ParaThm Label Thm
    | ParaProof Label Proof
    | ParaDefn Defn
+   | ParaTheory Theory
    | InstrAsm Asm
    | InstrUse -- Import/opening
    deriving (Show, Eq)

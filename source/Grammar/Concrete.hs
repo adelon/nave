@@ -38,10 +38,13 @@ grammar lexicon@Lexicon{..} = mdo
    let conns = map ((map . first . map . fmap) token) lexiconConnectives
 
    iden     <- rule (satisfy (`Set.member` lexiconIdens)    <?> "identifier")
+   isolOp   <- rule (satisfy (`Set.member` lexiconIsolOps)  <?> "isolated operator")
    number   <- rule (terminal maybeNumberTok                <?> "number")
    relator  <- rule (satisfy (`Set.member` lexiconRelators) <?> "relator")
    var      <- rule (terminal maybeVarTok                   <?> "variable")
    vars     <- rule (commaSep var)
+   cmd      <- rule (terminal maybeCmdTok                   <?> "TEX command")
+
 
 -- Formulae have three levels:
 --
@@ -108,7 +111,8 @@ grammar lexicon@Lexicon{..} = mdo
 
    termExpr    <- rule [TermExpr f | f <- math formula]
    termFun     <- rule [TermFun p | _the, p <- fun]
-   term        <- rule (termExpr <|> termFun)
+   termIsolOp  <- rule [TermExpr (ExprConst f) | f <- math isolOp]
+   term        <- rule (termExpr <|> termFun <|> termIsolOp)
 
 -- Basic statements are statements without any conjunctions or quantifiers.
 --
@@ -160,6 +164,13 @@ grammar lexicon@Lexicon{..} = mdo
    defnHead   <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion))
    defn       <- rule [Defn as head s | as <- many asm, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
 
+   -- In the future there needs to be dedicated functionality to handle isolated operators.
+   -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
+   theoryHead   <- rule [(t, t', v) | _an, t <- notion, _extends, t' <- notion, v <- optional (math var)]
+   theoryOps    <- rule $ math [[(f, ty)] | f <- cmd, _colon, ty <- formula]
+   theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])
+   theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, _equipped, fs <- theoryOps, as <- theoryAxioms]
+
 -- TODO Decide on reference format and implement this production rule.
 --
    byRef <- rule (pure Nothing)
@@ -174,11 +185,12 @@ grammar lexicon@Lexicon{..} = mdo
    instrLet  <- rule [InstrAsm a | optional _throughout, a <- asm]
 -- instrUse  <- rule [InstrUse i | optional _throughout, a <- use]
 
-   paraAxiom <- rule [ParaAxiom tag p | ~(tag, p) <- env "axiom" axiom]
-   paraThm   <- rule [ParaThm tag p | ~(tag, p) <- env "theorem" thm]
-   paraProof <- rule [ParaProof tag p | ~(tag, p) <- env "proof" proof]
-   paraDefn  <- rule [ParaDefn p | p <- env_ "definition" defn]
-   para      <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraProof <|> instrLet)
+   paraAxiom  <- rule [ParaAxiom tag p | ~(tag, p) <- env "axiom" axiom]
+   paraThm    <- rule [ParaThm tag p | ~(tag, p) <- env "theorem" thm]
+   paraProof  <- rule [ParaProof tag p | ~(tag, p) <- env "proof" proof]
+   paraDefn   <- rule [ParaDefn p | p <- env_ "definition" defn]
+   paraTheory <- rule [ParaTheory p | p <- env_ "theory" theory]
+   para       <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraTheory <|> paraProof <|> instrLet)
 
 -- Starting category.
 --
@@ -306,6 +318,11 @@ maybeWordTok = \case
 maybeNumberTok :: Tok -> Maybe Text
 maybeNumberTok = \case
    Number n -> Just n
+   _tok -> Nothing
+
+maybeCmdTok :: Tok -> Maybe Text
+maybeCmdTok = \case
+   Command n -> Just n
    _tok -> Nothing
 
 -- Tokens that are allowed to appear in labels of environments.
