@@ -134,7 +134,7 @@ mathEnd = lexeme do
 -- | Parses a word. Words are returned casefolded, since we want to ignore their case later on.
 word :: Lexer (Located Tok)
 word = lexeme do
-   w <- some (Char.letterChar <|> Char.char '\'')
+   w <- some (Char.letterChar <|> Char.char '\'' <|> Char.char '-')
    let t = Word (Text.toCaseFold (Text.pack w))
    pure t
 
