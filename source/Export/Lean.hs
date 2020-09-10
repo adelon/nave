@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Export.Lean where
 
 import Base
@@ -11,6 +13,7 @@ import Data.Text.Prettyprint.Doc.Render.Text
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Data.Set as Set
+import qualified Data.List as List
 
 
 data ExportState = ExportState
@@ -39,9 +42,9 @@ export :: [Para] -> Lexicon -> Text
 export doc regis = evalState exporting (ExportState 0 [] regis 0)
    where
    exporting :: State ExportState Text
-   exporting = renderStrict <$> layoutCompact <$> do
+   exporting = renderStrict <$> layoutSmart (LayoutOptions (AvailablePerLine 80 1)) <$> do
       doc' <- exportDocument doc
-      pure $ vsep [-- pretty preamble,
+      pure $ vsep [pretty preamble,
                   line, doc']
 
 exportDocument :: [Para] -> State ExportState (Doc a)
@@ -51,13 +54,13 @@ exportDeclaration :: Para -> State ExportState (Doc ann)
 exportDeclaration = \case
    ParaAxiom label axiom -> exportAxiom label axiom
    ParaThm label thm -> exportTheorem label thm
-   ParaProof label proof -> pure ""
+   ParaProof label proof -> error "TODO"
    ParaDefn defn -> exportDefinition defn
-   InstrAsm asm -> pure ""
-   InstrUse -> pure "" -- TODO: Imports
+   InstrAsm asm -> error "TOOD"
+   InstrUse -> error "TODO"
 
 getNameFromPattern :: Pattern -> State ExportState Text
-getNameFromPattern = go False ""
+getNameFromPattern = go False "" . reverse
   where
     go us t [] = pure t
     go us t (Nothing : ps) = go us t ps -- we render holes in a pattern as nothing special
@@ -66,7 +69,7 @@ getNameFromPattern = go False ""
     go us t (Just (Number p) : ps) = go False (p <> t) ps
     go us t (Just p : ps) = warn ("Ignored token in pattern: " <> Text.pack (show p)) >> go us t ps
 
-    add_ True = ("_" <>)
+    add_ True = (<> "_")
     add_ False = id
 
 -- | Get the name of the singular from a pattern.
@@ -76,17 +79,40 @@ getNameFromPredicateHead = \case
   DefnVerb mn term (Verb (SgPl pat1 pat2) terms) -> getNameFromPattern pat1
   DefnNotion mn term (Notion ls (BaseNotion (SgPl pat1 pat2) terms) rm) -> getNameFromPattern pat1
 
-data LeanVarKind = Implicit (Maybe (Last Text)) | Normal (Maybe (Last Text))
+data LeanType = LeanType Text [Lean]
+  deriving (Eq, Show)
+
+data LeanInfo = LeanInfo
+  { type_ :: Maybe (Last LeanType)
+  , constraints :: [Lean]
+  } deriving (Eq, Show, Semigroup)
+
+instance Monoid LeanInfo where
+  mempty = LeanInfo Nothing []
+
+data LeanVarKind = Implicit LeanInfo | Normal LeanInfo
+   deriving (Eq, Show)
+
+instance Semigroup LeanVarKind where
+  Implicit m1 <> Implicit m2 = Implicit (m1 <> m2)
+  Implicit m1 <> Normal m2 = Normal (m1 <> m2)
+  Normal m1 <> Implicit m2 = Normal (m1 <> m2)
+  Normal m1 <> Normal m2 = Normal (m1 <> m2)
+
+instance Monoid LeanVarKind where
+  mempty = Implicit mempty
 
 data Lean = LVar Text LeanVarKind
   | LPrefixApp Lean Lean  -- LPrefixApp "f" "a"
   | LInfixApp Text Lean Lean -- LInfixApp "+" "a" "b"
   | LNumber Text
   | LSymbol Text -- we will just copy symbols into the Lean code for now
-  | LConj [Lean] -- to handle the chain: k divides 1, n
+  | LAll (NonEmpty Text) Lean
+  | LConj Conj Lean Lean
+   deriving (Eq, Show)
 
 extractExpr :: Expr -> State ExportState Lean
-extractExpr (ExprVar (Var v)) = pure $ LVar v (Normal Nothing)
+extractExpr (ExprVar (Var v)) = pure $ LVar v mempty
 extractExpr (ExprConst t) = do
   t' <- getNameFromPattern [Just t]
   pure $ LSymbol t'
@@ -97,9 +123,10 @@ extractExpr (ExprOp op es) = do
     pure $ foldl' LPrefixApp (LSymbol op') es'
 extractExpr (ExprParen e) = extractExpr e
 extractExpr (ExprApp e1 e2) = LPrefixApp <$> extractExpr e1 <*> extractExpr e2
+extractExpr (ExprChain ch) = extractChain ch
 
 extractChain :: Chain -> State ExportState Lean
-extractChain (ChainBase (e :| es)) = LConj <$> mapM extractExpr (e : es)
+extractChain (ChainBase (e :| es)) = foldl1 (LConj And) <$> mapM extractExpr (e : es)
 extractChain (ChainCons (e :| es) r c) = spread <$> (go r [e : es] c >>= conv)
   where
     go r vars (ChainBase (e :| es)) = pure (r, (e : es) : vars)
@@ -114,7 +141,62 @@ extractChain (ChainCons (e :| es) r c) = spread <$> (go r [e : es] c >>= conv)
       let f = case r of
             Word w -> foldl' LPrefixApp (LSymbol w)
             Symbol w -> foldl1 (LInfixApp w)
-      in LConj $ map f $ foldl' (\l e -> [e':l' | l' <- l, e' <- e]) [[]] es
+            Command w -> foldl' LPrefixApp (LSymbol w)
+      in foldl1 (LConj And) $ map f $ foldl' (\l e -> [e':l' | l' <- l, e' <- e]) [[]] es
+
+extractTerm :: Term -> State ExportState Lean
+extractTerm (TermExpr e) = extractExpr e
+extractTerm (TermFun _) = error "Fun has yet to be implemented"
+
+-- | TODO: We currently ignore AttrSuch
+extractNotion :: Notion -> State ExportState LeanInfo
+extractNotion (Notion attrLs (BaseNotion (SgPl pat _) terms) mattrR) = do
+  name <- getNameFromPattern pat
+  name_args <- mapM extractTerm terms
+  let type_ = LeanType name name_args
+  let rs = maybeToList $ mattrR >>= \case
+        AttrR p ts -> Just (p, ts)
+        AttrSuch _ -> Nothing
+  let ls = [(p, t) | (AttrL p t) <- attrLs]
+  constraints <- for (ls ++ rs) $ \(p, ts) -> do
+    name <- getNameFromPattern p
+    args <- mapM extractTerm ts
+    pure $ foldl' LPrefixApp (LSymbol name) args
+  pure $ LeanInfo (Just (Last type_)) constraints
+
+fromSimpleTerm :: Term -> Text
+fromSimpleTerm (TermExpr (ExprVar (Var t))) = t
+fromSimpleTerm (TermExpr (ExprChain (ChainBase (ExprVar (Var m) :| [])))) = m
+fromSimpleTerm t = error $ "Ouch! This should not have happened. I expected a simple term but got: " ++ show t
+
+varsInTerm :: Term -> [(Text, LeanVarKind)]
+varsInTerm (TermFun _) = error "Fun has yet to be implemented"
+varsInTerm (TermExpr e) = varsInExpr e
+  where
+    varsInExpr = \case 
+      (ExprVar (Var t)) -> [(t, mempty)]
+      (ExprConst _) -> []
+      (ExprNumber _) -> []
+      (ExprOp _ es) -> concatMap varsInExpr es
+      (ExprParen e) -> varsInExpr e
+      (ExprApp e1 e2) -> varsInExpr e1 <> varsInExpr e2
+      (ExprChain ch) -> varsInChain ch
+
+    varsInChain (ChainBase es) = concatMap varsInExpr es
+    varsInChain (ChainCons es _ ch) = concatMap varsInExpr es <> varsInChain ch
+
+toNormal :: LeanVarKind -> LeanVarKind
+toNormal (Implicit v) = Normal v
+toNormal (Normal v) = Normal v
+
+-- | We can assume that the 'Term' will consist of only a variable.
+varsInDefn :: DefnHead -> State ExportState [(Text, LeanVarKind)]
+varsInDefn (DefnAttr mn t (Attr _ ts)) = do
+  info <- fromMaybe mempty <$> traverse extractNotion mn
+  let v = fromSimpleTerm t
+  let vs = concatMap varsInTerm ts
+  pure $ [(v, Normal info)] ++ map (fmap toNormal) vs
+varsInDefn _ = error "TODO"
 
 -- splitAssumptions :: [Assumption] -> ([Typing Var Typ], [Statement])
 -- splitAssumptions = go ([], [])
@@ -122,23 +204,6 @@ extractChain (ChainCons (e :| es) r c) = spread <$> (go r [e : es] c >>= conv)
     -- go acc [] = acc
     -- go (ts, ss) ((AssumptionPretyping ns):xs) = go (ts ++ toList ns, ss) xs
     -- go (ts, ss) ((Assumption s):xs) = go (ts, ss ++ [s]) xs
-
-
--- instance Semigroup LeanVar where
-  -- Implicit m1 <> Implicit m2 = Implicit (m1 <> m2)
-  -- Implicit m1 <> Normal m2 = Normal (m1 <> m2)
-  -- Normal m1 <> Implicit m2 = Normal (m1 <> m2)
-  -- Normal m1 <> Normal m2 = Normal (m1 <> m2)
-
--- instance Monoid LeanVar where
-  -- mempty = Implicit Nothing
-
--- varsInPatt :: PredicateHead -> [(Var, Maybe Typ)]
--- varsInPatt = \case
-   -- PredicateAdjPattern vs _ -> toList vs
-   -- PredicateVerbPattern vs _ -> toList vs
-   -- PredicateNominalPattern vs _ -> toList vs
-   -- PredicateRelator (v1, _, v2) -> [(v1, Nothing), (v2, Nothing)]
 
 -- mkVars :: [Typing Var Typ] -> [(Var, Maybe Typ)] -> [Var] -> State ExportState [(Var, LeanVar)]
 -- mkVars ts vs frees = do
@@ -154,21 +219,42 @@ extractChain (ChainCons (e :| es) r c) = spread <$> (go r [e : es] c >>= conv)
     -- Nothing -> warn "Cycles!" >> pure []
     -- Just xs -> pure $ xs
 
--- exportLeanVars :: Lexicon -> [(Var, LeanVar)] -> Doc ann
--- exportLeanVars r lv = hsep $ map go lv
-  -- where
-    -- go (v, Normal Nothing) = "(" <> pretty v <> ")"
-    -- go (v, Normal (Just t)) = "(" <> pretty v <> " : " <> exportExpr r (getLast t) <> ")"
-    -- go (v, Implicit Nothing) = "{" <> pretty v <> "}"
-    -- go (v, Implicit (Just t)) = "{" <> pretty v <> " : " <> exportExpr r (getLast t) <> "}"
+extractStmt :: Stmt -> State ExportState Lean
+extractStmt (StmtFormula f) = extractExpr f
+extractStmt (All vs mstmt stmt) = do
+  asms <- mapM extractStmt $ maybeToList mstmt
+  claim <- extractStmt stmt
+  let body = case asms of
+        [] -> claim
+        asms -> LConj If (foldl1 (LConj And) asms) claim
+  pure $ LAll (fmap unVar vs) body
+extractStmt (StmtConj c s1 s2) = do
+  s1' <- extractStmt s1
+  s2' <- extractStmt s2
+  pure $ LConj c s1' s2'
+extractStmt _ = error "TODO"
+
+extractAsm :: Asm -> State ExportState Lean
+extractAsm = error "TODO"
+
+exportLeanVars :: [(Text, LeanVarKind)] -> Doc ann
+exportLeanVars lv = hsep $ map go lv
+  where
+    go (v, Normal (LeanInfo Nothing _)) = "(" <> pretty v <> ")"
+    go (v, Normal (LeanInfo (Just t) _)) = "(" <> pretty v <> " : " <> showLastType t <> ")"
+    go (v, Implicit (LeanInfo Nothing _)) = "{" <> pretty v <> "}"
+    go (v, Implicit (LeanInfo (Just t) _)) = "{" <> pretty v <> " : " <> showLastType t <> "}"
+
+    showLastType lt = let (LeanType t ts) = getLast lt
+      in exportLean (foldl' LPrefixApp (LSymbol t) ts)
 
 exportDefinition :: Defn -> State ExportState (Doc ann)
 exportDefinition (Defn asms dhead stmt) = do
   name <- getNameFromPredicateHead dhead
-  pure $ viaShow (Defn asms dhead stmt)
-  -- sig <- exportSignature (varsInPatt ph) asms stmt "Prop"
-  -- r <- gets registry
-  -- pure $ hsep $ ["def", pretty name, sig, ":=", exportProp r stmt]
+  vars <- exportLeanVars <$> varsInDefn dhead
+  asms' <- mapM extractAsm asms
+  stmt' <- extractStmt stmt
+  pure $ vsep [hsep ["def", pretty name, vars, " : Prop :="], indent 2 (exportLean stmt')]
 
 -- exportSignature :: [(Var, Maybe Typ)] -> [Assumption] -> Statement -> Doc ann -> State ExportState (Doc ann)
 -- exportSignature vars asms stmt result = do
@@ -183,26 +269,28 @@ exportAxiom :: Label -> Axiom -> State ExportState (Doc ann)
 exportAxiom nameMay (Axiom asms stmt) = do
   name <- maybe ((\i -> "ax_" <> Text.pack (show i)) <$> newLemmaId) pure nameMay
   pure ""
-  -- r <- gets registry
-  -- sig <- exportSignature [] asms stmt (exportProp r stmt)
-  -- pure $ hsep $ ["axiom", pretty name, sig]
 
 exportTheorem :: Label -> Thm -> State ExportState (Doc ann)
 exportTheorem nameMay (Thm asms stmt) = do
   name <- maybe ((\i -> "thm_" <> Text.pack (show i)) <$> newLemmaId) pure nameMay
   pure ""
-  -- r <- gets registry
-  -- sig <- exportSignature [] asms stmt (exportProp r stmt)
-  -- pure $ hsep $ ["theorem", pretty name, sig, ":=", "omitted"]
 
--- lookupTok :: Registry -> Tok -> Maybe (Expr -> Expr -> Prop)
--- lookupTok reg tok = Map.lookup tok (relators reg) >>= \case
-  -- "eq" -> Just $ \x -> \y -> x `Equals` y
-  -- "ne" -> Just $ \x -> \y -> Not (x `Equals` y)
-  -- t -> Just $ \x -> \y -> Predicate t `PredApp` x `PredApp` y
+exportConj :: Conj -> Doc ann
+exportConj = \case
+  If -> "→"
+  And -> "∧"
+  Or -> "∨"
+  Iff -> "↔"
 
--- prec :: Int -> Int -> Doc a -> Doc a
--- prec ctx here d = if ctx >= here then "(" <> d <> ")" else d
+exportLean :: Lean -> Doc ann
+exportLean = \case
+  (LVar t _) -> pretty t -- TODO
+  (LPrefixApp l1 l2) -> hsep [exportLean l1, exportLean l2]
+  (LInfixApp t l1 l2) -> hsep ["(", exportLean l1, pretty t, exportLean l2, ")"]
+  (LNumber t) -> pretty t
+  (LSymbol t) -> pretty t
+  (LAll vs l) -> hsep $ "∀" : List.intersperse ", ∀" (pretty <$> toList vs) ++ [",", exportLean l]
+  (LConj c l1 l2) -> hsep ["(", exportLean l1, exportConj c, exportLean l2, ")"]
 
 -- -- TODO(anton): We should have a monad here for keeping track of precedences
 -- -- and prefix/infixr/infixl/..
@@ -261,9 +349,6 @@ exportTheorem nameMay (Thm asms stmt) = do
 preamble :: Text
 preamble = Text.intercalate "\n"
    [ "-- BEGIN PREAMBLE"
-   , "import data.nat.basic"
-   , "import data.nat.dist"
-   , "import data.rat"
    , ""
    -- Defines special notation for almost-universal quantification.
    -- In the future this should be expanded to a type class for more general use.
@@ -279,7 +364,8 @@ preamble = Text.intercalate "\n"
    , ""
    , "notation `∄` binders `, ` r:(scoped P, ¬ ∃ n, P n) := r"
    , "notation `natural_number` := ℕ"
-   , "notation `rational_number` := ℚ"
+   , "def divides {α} := @has_dvd.dvd α"
+   , "def neq {α} (a : α) (b) := a ≠ b"
    , ""
    , "axiom omitted {p : Prop} : p"
    , ""
