@@ -31,8 +31,9 @@ getFiles dir = do
 work :: FilePath -> IO ()
 work file = do
    let inPath = "examples/" <> file
-   let outPath = "examples/" <> file <> ".out"
+   let outPath = "debug/" <> file <> ".out"
    let tokPath = "debug/" <> file <> ".tokens"
+   let lexiconPath = "debug/" <> file <> ".lexicon"
    let scanPath = "debug/" <> file <> ".scans"
    putStrLn ("Parsing '" <> inPath <> "'.")
    tokenResult <- tokenize inPath
@@ -46,12 +47,19 @@ work file = do
          -- Remove raw source and location information for now.
          let simpleStream = fmap unLocated (unTokStream stream)
          let scanResult = fullParses (parser scanner) simpleStream
+         let scans = case scanResult of
+               ([s], _) -> s
+               _        -> impossible "scanner should have unambiguous grammar"
          --
          -- Write scanned patterns to a file.
          Text.writeFile scanPath (Text.pack (show scanResult))
          --
+         -- Update the lexicon and dump its contents for debugging.
+         let lexicon = extendLexicon scans builtins
+         LazyText.writeFile lexiconPath (pShowNoColor lexicon)
+         --
          -- Write the parse tree to a file.
-         let parseResult = fullParses (parser (grammar builtins)) simpleStream
+         let parseResult = fullParses (parser (grammar lexicon)) simpleStream
          LazyText.writeFile outPath (pShowNoColor parseResult)
 
 

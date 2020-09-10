@@ -44,3 +44,9 @@ many1 a = NonEmpty.fromList <$> Applicative.some a
 -- Discards the type information that the result is `NonEmpty`.
 many1_ :: Alternative f => f a -> f [a]
 many1_ = Applicative.some
+
+
+-- Should be used for braches that are unreachable or impossible states.
+-- Allows searching for 'error' while ignoring impossible branches.
+impossible :: String -> a
+impossible = error

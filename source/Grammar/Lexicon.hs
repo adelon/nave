@@ -123,7 +123,6 @@ builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
    , "monotone"
    , "nonzero"
    , "odd"
-   , "prime"
    , "reflexive"
    , "surjective"
    , "transitive"
@@ -131,8 +130,7 @@ builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
 
 builtinAttrRs :: Set Pattern
 builtinAttrRs = Set.map unsafeReadPattern (Set.fromList
-   [ "coprime to ?"
-   , "of finite order"
+   [ "of finite order"
    , "of finite type"
    , "pointwise bounded by ? on ?"
    ])
