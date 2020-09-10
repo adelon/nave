@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fplugin=Comprehension.Plugin #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 -- Data types for the abstract syntax tree and helper functions
 -- for constructing the lexicon.

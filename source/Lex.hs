@@ -1,3 +1,4 @@
+{-# LANGUAGE NoImplicitPrelude #-}
 -- This module defines the lexer and its associated data types.
 -- The lexer takes `Text` as input and produces a stream of tokens
 -- annotated with positional information. This information is bundled
@@ -9,6 +10,7 @@
 -- (α, β, γ, ..., 𝔸, 𝔹, ℂ, ...). Similarly, `\begin{...}` and `\end{...}` commands
 -- are parsed as a single token.
 --
+
 module Lex
    ( Tok(..)
    , Delim(..)
