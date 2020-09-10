@@ -1,0 +1,27 @@
+\begin{theory}
+   An arithmetic consists of
+   a set $N$, an element $\zero \in N$,
+   $S : N\to N$,
+   $+: N\to N$
+   and $\cdot : N\to N$.
+\end{theory}
+
+\begin{theory}
+   A Robinson arithmetic is an arithmetic $(N,\zero,S,+,\cdot)$
+   such that
+   \begin{enumerate}
+      \item $\forall x.\, S(x)\neq \zero$
+      \item $\forall x y.\, S(x) = S(y) \to x = y$
+      \item $\forall y.\, y = \zero \lor \exists x.\, S(x) = y$
+      \item $\forall x.\, x + \zero = x$
+      \item $\forall x y.\, x + S(y) = S(x+y)$
+      \item $\forall x.\, x\cdot \zero = \zero$
+      \item $\forall x y.\, x\cdot S(y) = (x\cdot y) + x$
+   \end{enumerate}
+\end{theory}
+
+Throughout, let $N$ be a Robinson arithmetic.
+
+\begin{theorem}
+    $S(S(\zero))\cdot S(S(\zero)) = S(S(S(S(\zero))))$.
+\end{theorem}

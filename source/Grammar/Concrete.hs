@@ -39,10 +39,13 @@ grammar lexicon@Lexicon{..} = mdo
    let conns = map ((map . first . map . fmap) token) lexiconConnectives
 
    iden     <- rule (satisfy (`Set.member` lexiconIdens)    <?> "identifier")
+   isolOp   <- rule (satisfy (`Set.member` lexiconIsolOps)  <?> "isolated operator")
    number   <- rule (terminal maybeNumberTok                <?> "number")
    relator  <- rule (satisfy (`Set.member` lexiconRelators) <?> "relator")
    var      <- rule (terminal maybeVarTok                   <?> "variable")
    vars     <- rule (commaSep var)
+   cmd      <- rule (terminal maybeCmdTok                   <?> "TEX command")
+
 
 -- Formulae have three levels:
 --
@@ -109,7 +112,8 @@ grammar lexicon@Lexicon{..} = mdo
 
    termExpr    <- rule [TermExpr f | f <- math formula]
    termFun     <- rule [TermFun p | _the, p <- fun]
-   term        <- rule (termExpr <|> termFun)
+   termIsolOp  <- rule [TermExpr (ExprConst f) | f <- math isolOp]
+   term        <- rule (termExpr <|> termFun <|> termIsolOp)
 
 -- Basic statements are statements without any conjunctions or quantifiers.
 --
@@ -128,14 +132,14 @@ grammar lexicon@Lexicon{..} = mdo
 
    suchStmt <- rule [s | _suchThat, s <- stmt, optional _comma]
 
-   all       <- rule [All xs b s | _all <|> _every, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
-   allNotion <- rule [AllNotion n xs b s | _every, n <- notion, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
+   all       <- rule [All xs Nothing b s | _all <|> _every, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
+   allNotion <- rule [All xs (Just n) b s | _every, n <- notion, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
 
-   some       <- rule [Some xs s | _exists, xs <- math vars, _suchThat, s <- stmt]
-   someNotion <- rule [SomeNotion n (pure x) s | _exists, _an, ~(n, x) <- notionVar, _suchThat, s <- stmt]
+   some       <- rule [Some xs Nothing s | _exists, xs <- math vars, _suchThat, s <- stmt]
+   someNotion <- rule [Some (pure x) (Just n) s | _exists, _an, ~(n, x) <- notionVar, _suchThat, s <- stmt]
 
-   none        <- rule [None xs s | _exists, _no, xs <- math vars, _suchThat, s <- stmt]
-   noneNotion  <- rule [NoneNotion n xs s | _exists, _no, n <- notion, xs <- math vars, _suchThat, s <- stmt]
+   none        <- rule [None xs Nothing s | _exists, _no, xs <- math vars, _suchThat, s <- stmt]
+   noneNotion  <- rule [None xs (Just n) s | _exists, _no, n <- notion, xs <- math vars, _suchThat, s <- stmt]
 
    stmtQuant       <- rule (all <|> some <|> none)
    stmtQuantNotion <- rule (allNotion <|> someNotion <|> noneNotion)
@@ -161,6 +165,13 @@ grammar lexicon@Lexicon{..} = mdo
    defnHead   <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion))
    defn       <- rule [Defn as head s | as <- many asm, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
 
+   -- In the future there needs to be dedicated functionality to handle isolated operators.
+   -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
+   theoryHead   <- rule [(t, t', v) | _an, t <- notion, _extends, t' <- notion, v <- optional (math var)]
+   theoryOps    <- rule $ math [[(f, ty)] | f <- cmd, _colon, ty <- formula]
+   theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])
+   theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, _equipped, fs <- theoryOps, as <- theoryAxioms]
+
 -- TODO Decide on reference format and implement this production rule.
 --
    byRef <- rule (pure Nothing)
@@ -175,11 +186,12 @@ grammar lexicon@Lexicon{..} = mdo
    instrLet  <- rule [InstrAsm a | optional _throughout, a <- asm]
 -- instrUse  <- rule [InstrUse i | optional _throughout, a <- use]
 
-   paraAxiom <- rule [ParaAxiom tag p | ~(tag, p) <- env "axiom" axiom]
-   paraThm   <- rule [ParaThm tag p | ~(tag, p) <- env "theorem" thm]
-   paraProof <- rule [ParaProof tag p | ~(tag, p) <- env "proof" proof]
-   paraDefn  <- rule [ParaDefn p | p <- env_ "definition" defn]
-   para      <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraProof <|> instrLet)
+   paraAxiom  <- rule [ParaAxiom tag p | ~(tag, p) <- env "axiom" axiom]
+   paraThm    <- rule [ParaThm tag p | ~(tag, p) <- env "theorem" thm]
+   paraProof  <- rule [ParaProof tag p | ~(tag, p) <- env "proof" proof]
+   paraDefn   <- rule [ParaDefn p | p <- env_ "definition" defn]
+   paraTheory <- rule [ParaTheory p | p <- env_ "theory" theory]
+   para       <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraTheory <|> paraProof <|> instrLet)
 
 -- Starting category.
 --
@@ -258,8 +270,8 @@ end kind   = token (EndEnv kind)
 -- Skips optional names after the beginning of the environment and also
 -- returns the content of a label, if present.
 --
-env :: Text -> Prod r e Tok a -> Prod r e Tok (Maybe Text, a)
-env kind body = [(l, b) | begin kind, optional tag, l <- label, b <- body, end kind]
+env :: Text -> Prod r e Tok a -> Prod r e Tok (Maybe [Tok], a)
+env kind body = [(t, b) | begin kind, t <- optional tag, optional label, b <- body, end kind]
    where
       tag :: Prod r e Tok [Tok]
       tag = bracket (many (satisfy (/= Close Bracket)))
@@ -267,12 +279,12 @@ env kind body = [(l, b) | begin kind, optional tag, l <- label, b <- body, end k
 -- `env_` is like `env`, but without allowing labels.
 --
 env_ :: Text -> Prod r e Tok a -> Prod r e Tok a
-env_ kind body = [b | begin kind, _ <- label, b <- body, end kind]
+env_ kind body = [b | begin kind, optional label, b <- body, end kind]
 
 -- A label for referencing.
 --
-label :: Prod r e Tok (Maybe Text)
-label = optional [mconcat ls | command "label", ls <- group (many (terminal maybeLabelTok))]
+label :: Prod r e Tok Text
+label = [mconcat ls | command "label", ls <- group (many (terminal maybeLabelTok))]
 
 math :: Prod r String Tok a -> Prod r String Tok a
 math body = [b | begin "math", b <- body, end "math"]
@@ -307,6 +319,11 @@ maybeWordTok = \case
 maybeNumberTok :: Tok -> Maybe Text
 maybeNumberTok = \case
    Number n -> Just n
+   _tok -> Nothing
+
+maybeCmdTok :: Tok -> Maybe Text
+maybeCmdTok = \case
+   Command n -> Just n
    _tok -> Nothing
 
 -- Tokens that are allowed to appear in labels of environments.
