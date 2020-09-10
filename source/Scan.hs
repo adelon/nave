@@ -119,13 +119,14 @@ guessNominalPlural pat = SgPl pat (pluralize pat)
          [tok, tok', Just (Word w)] -> [tok, tok', Just (Word (Text.snoc w 's'))]
          pat' -> pat'
 
-      isPreposition :: Tok -> Bool
-      isPreposition w = Set.member w (Set.map Word prepositions)
-
-
 isAttrR :: Pattern -> Bool
-isAttrR = \case
-   _ -> False
+isAttrR = containsPreposition
+   where
+      containsPreposition :: Pattern -> Bool
+      containsPreposition pat = any isPreposition (catMaybes pat)
+
+isPreposition :: Tok -> Bool
+isPreposition w = Set.member w (Set.map Word prepositions)
 
 
 -- Takes the scanned patterns and inserts them in the correct
@@ -146,7 +147,7 @@ extendLexicon (scan : scans) lexicon@Lexicon{..} | notFresh scan = extendLexicon
          ScanVerb pat -> Set.member pat (Set.map sg lexiconVerbs)
 --
 extendLexicon (scan : scans) lexicon@Lexicon{..} = case scan of
-   ScanAttr pat | isAttrR pat -> extendLexicon scans lexicon{lexiconAttrLs = Set.insert pat lexiconAttrRs}
+   ScanAttr pat | isAttrR pat -> extendLexicon scans lexicon{lexiconAttrRs = Set.insert pat lexiconAttrRs}
    ScanAttr pat -> extendLexicon scans lexicon{lexiconAttrLs = Set.insert pat lexiconAttrLs}
    --
    -- TODO adding patterns with grammatical number (SgPL).
