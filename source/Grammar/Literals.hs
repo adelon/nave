@@ -32,8 +32,10 @@ module Grammar.Literals
    , _and
    , _are
    , _be
+   , _equipped
    , _every
    , _exists
+   , _extends
    , _fix
    , _for
    , _have
@@ -45,6 +47,7 @@ module Grammar.Literals
    , _no
    , _not
    , _or
+   , _satisfying
    , _show
    , _since
    , _suchThat
@@ -55,11 +58,12 @@ module Grammar.Literals
    , _thus
    , _write
    -- Symbols
-   , _in
-   , _eq
-   , _defeq
+   , _colon
    , _comma
+   , _defeq
    , _dot
+   , _eq
+   , _in
    ) where
 
 
@@ -74,13 +78,15 @@ import qualified Data.Text as Text
 w lit = token (Word lit) <?> Text.unpack lit
 
 
+_all = optional (w "for") *> w "all"
 _an = w "a" <|> w "an"
 _and = w "and"
 _are = w "are"
-_all = optional (w "for") *> w "all"
-_every = optional (w "for") *> w "every"
 _be = w "be"
+_equipped = optional (w "equipped") *>  "with"
+_every = optional (w "for") *> w "every"
 _exists = w "there" *> w "exists"
+_extends = _is *> _an
 _fix = w "fix"
 _for = w "for"
 _have = w "we" *> w "have" <* optional (w "that")
@@ -92,6 +98,7 @@ _let = w "let"
 _no = w "no"
 _not = w "not"
 _or = w "or"
+_satisfying = _suchThat <|> w "satisfying"
 _show = optional (w "first" <|> w "finally" <|> w "next" <|> w "now") *> w "we" *> w "show" <* optional (w "that")
 _since = w "since" <|> w "because"
 _suchThat = w "such" *> w "that"
@@ -103,9 +110,9 @@ _thus = w "thus"
 _write = (optional (w "we") *> w "say" <* optional (w "that")) <|> (optional (w "we") *> w "write")
 
 
-
-_in = token (Symbol "∈") <|> token (Command "in") <?> ("∈" :: String)
-_eq = token (Symbol "=") <?> ("=" :: String)
-_defeq = token (Symbol ":=") <?> (":=" :: String) -- Should use `\coloneq` from unicode-math as display.
-_dot = token (Symbol ".") <?> ("." :: String)
-_comma = token (Symbol ",") <?> ("," :: String)
+_colon = token (Symbol ":") <?> ":"
+_comma = token (Symbol ",") <?> ","
+_defeq = token (Symbol ":=") <?> ":=" -- Should use `\coloneq` from unicode-math as display.
+_dot = token (Symbol ".") <?> "."
+_eq = token (Symbol "=") <?> "="
+_in = token (Symbol "∈") <|> token (Command "in") <?> "∈"

@@ -112,31 +112,22 @@ data Stmt
    | StmtExists Notion
    | StmtConj Conj Stmt Stmt
 --
--- The `Maybe Stmt`s in quantifications are additional constraints
--- on the variable (such-that-constraints). They do not occur in
--- existential quantifications.
+-- A quantification binds a nonempty list of variables.
 --
--- Plain quantifications have completely unbounded variables
--- e.g.: 'for all <vs> such that <s1> we have <s2>' => All vs s1 s2
+-- The `Maybe Notion` is an optional typing.
 --
--- The `Nom` variants have variables bounded by a notion.
--- e.g.: 'for all natural numbers $m,n$ ...'
+-- The `Maybe Stmt`s in universal quantifications are additional constraints
+-- on the variable (such-that-constraints). They do not occur in existential
+-- quantifications, since 'such that' is used differently there.
 --
-   | All (NonEmpty Var) (Maybe Stmt) Stmt
-   | AllNotion Notion (NonEmpty Var) (Maybe Stmt) Stmt
-   | AllIn (NonEmpty Var) Formula (Maybe Stmt) Stmt
-
-   | Most (NonEmpty Var) (Maybe Stmt) Stmt
-   | MostIn (NonEmpty Var) Formula (Maybe Stmt) Stmt
-
-   | Some (NonEmpty Var) Stmt
-   | SomeNotion Notion (NonEmpty Var) Stmt
-
-   | None (NonEmpty Var) Stmt
-   | NoneNotion Notion (NonEmpty Var) Stmt
-
-   | Uniq (NonEmpty Var) Stmt
-   | UniqNotion Notion (NonEmpty Var) Stmt
+   | All  (NonEmpty Var) (Maybe Notion) (Maybe Stmt) Stmt
+   | Most (NonEmpty Var) (Maybe Notion) (Maybe Stmt) Stmt
+   | Some (NonEmpty Var) (Maybe Notion) Stmt
+   | None (NonEmpty Var) (Maybe Notion) Stmt
+   | Uniq (NonEmpty Var) (Maybe Notion) Stmt
+--
+-- Missing generalized bounded quantifications: for all k < n ...
+--
    deriving (Show, Eq, Ord)
 
 
@@ -158,10 +149,10 @@ data Thm = Thm [Asm] Stmt
 -- i.e. the definiendum. The `Maybe Notion` corresponds to an optional
 -- type annotation for the `Term` of the head. The last part of the head
 -- is the pattern being defined. The `Term` and the pattern being defined
--- must be 'simple'. This is not enforced syntactically, but with a
+-- must be 'simple'. This is not enforced syntactically, but with a
 -- separate wf-check. A `Term` is simple if it is an expression that consists
 -- of only a variable. A pattern is simple if it is precisely a pattern of
--- simple terms. Refer also to `isWfDefn` and to the following example.
+-- simple terms. Refer also to `isWfDefn` and to the following example.
 --
 --   'A natural number   $n$        divides $m$   iff   ...'
 --    ^^^^^^^^^^^^^^^^   ^^^        ^^^^^^^^^^^         ^^^
@@ -177,7 +168,6 @@ data DefnHead
 data Defn
    = Defn [Asm] DefnHead Stmt
    deriving (Show, Eq)
-
 
 -- Well-formedness check for definitions.
 -- The following conditions need to be met.
@@ -213,6 +203,19 @@ data ProofStep
    | ProofSubGoal Stmt Proof Stmt
    deriving (Show, Eq)
 
+
+
+data Theory = Theory
+   { theoryDefines :: Notion
+   , theoryExtends :: Notion
+   , theoryExtendsVar :: Maybe Var
+   , theoryHas :: [(Text, Expr)] -- Text is the name of the command.
+   , theorySatisfies :: [Stmt]
+   } deriving (Show, Eq)
+
+
+
+
 data Proof
    = Proof [ProofStep]
    deriving (Show, Eq)
@@ -225,6 +228,7 @@ data Para
    | ParaThm Label Thm
    | ParaProof Label Proof
    | ParaDefn Defn
+   | ParaTheory Theory
    | InstrAsm Asm
    | InstrUse -- Import/opening
    deriving (Show, Eq)

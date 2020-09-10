@@ -25,6 +25,7 @@ import qualified Data.List as List
 data Lexicon = Lexicon
    { lexiconIdens       :: Set Tok
    , lexiconOperators   :: [[(Holey Tok, Associativity)]]
+   , lexiconIsolOps     :: Set Tok
    , lexiconConnectives :: [[(Holey Tok, Associativity)]]
    , lexiconRelators    :: Set Relator
    , lexiconVerbs       :: Set (SgPl Pattern)
@@ -45,6 +46,7 @@ builtins :: Lexicon
 builtins = Lexicon
    { lexiconIdens       = builtinIdens
    , lexiconOperators   = builtinOperators
+   , lexiconIsolOps     = builtinIsolOperators
    , lexiconConnectives = builtinConnectives
    , lexiconRelators    = builtinRelators
    , lexiconAttrLs      = builtinAttrLs
@@ -73,6 +75,10 @@ builtinOperators =
    , [(binOp (Symbol "+"), LeftAssoc)]
    , [(binOp (Command "mul"), LeftAssoc)]
    ]
+
+
+builtinIsolOperators :: Set Tok
+builtinIsolOperators = Set.fromList [Command "mul", Symbol "+"]
 
 
 builtinRelators :: Set Relator
@@ -146,11 +152,14 @@ builtinVerbs = Set.map unsafeReadPatternSgPl (Set.fromList
 --
 builtinNominals :: Set (SgPl Pattern)
 builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
-   [ "lattice[/s]"
-   , "complete lattice[/s]"
+   [ "complete lattice[/s]"
+   , "lattice[/s]"
+   , "group[/s]"
+   , "monoid[/s]"
    , "natural number[/s]"
    , "rational number[/s]"
    , "ring[/s]"
+   , "semigroup[/s]"
    , "set[/s]"
    , "divisor[/s] of ?"
    , "endomorphism[/s] of ?"
