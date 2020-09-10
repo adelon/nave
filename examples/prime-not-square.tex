@@ -4,13 +4,18 @@
 \end{definition}
 
 \begin{definition}
-  A natural number $p$ is prime iff $p\neq 0,1$ and for every $k$
+  A natural number $p$ is prime iff $p\neq 0,1$ and
+  if $p\divides m\mul n$, then $p\divides m$ or $p\divides n$.
+\end{definition}
+
+\begin{definition}
+  A natural number $p$ is irreducible iff $p\neq 0,1$ and for every $k$
   such that $k\divides p$, we have $k = p$ or $k = 1$.
 \end{definition}
 
 \begin{theorem}[Euclid's lemma]
-  If $p$ is prime and $p\divides m\mul n$
-  then $p\divides m$ or $p\divides n$.
+  Let $p$ be a natural number.
+  Then $p$ is prime iff $p$ is irreducible.
 \end{theorem}
 
 \begin{theorem}[Clear denominator]
