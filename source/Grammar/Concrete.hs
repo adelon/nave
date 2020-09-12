@@ -127,7 +127,8 @@ grammar lexicon@Lexicon{..} = mdo
 
    stmtOr  <- rule (stmtBase <|> [StmtConj Or s1 s2 | s1 <- stmtBase, _or, s2 <- stmt])
    stmtAnd <- rule (stmtOr   <|> [StmtConj And s1 s2 | s1 <- stmtOr, _and, s2 <- stmt])
-   stmtIf  <- rule [StmtConj If s1 s2 | _if, s1 <- stmt, _then, s2 <- stmt]
+   stmtIff <- rule (stmtAnd  <|> [StmtConj Iff s1 s2 | s1 <- stmtAnd, _iff, s2 <- stmt])
+   stmtIf  <- rule [StmtConj If s1 s2 | _if, s1 <- stmt, optional _comma, _then, s2 <- stmt]
    stmtNeg <- rule [StmtNeg s | _itIsWrong, s <- stmt]
 
    suchStmt <- rule [s | _suchThat, s <- stmt, optional _comma]
@@ -144,7 +145,7 @@ grammar lexicon@Lexicon{..} = mdo
    stmtQuant       <- rule (all <|> some <|> none)
    stmtQuantNotion <- rule (allNotion <|> someNotion <|> noneNotion)
 
-   stmt <- rule (stmtNeg <|> stmtIf <|> stmtQuant <|> stmtQuantNotion <|> stmtAnd)
+   stmt <- rule (stmtNeg <|> stmtIf <|> stmtQuant <|> stmtQuantNotion <|> stmtIff)
 
    asmLetIn       <- rule [AsmLetIn xs e | _let, ~(xs, e) <- math typing]
    asmLetNotion   <- rule [AsmLetNom (pure x) n | _let, x <- math var, _be, _an, n <- notion]
@@ -270,8 +271,8 @@ end kind   = token (EndEnv kind)
 -- Skips optional names after the beginning of the environment and also
 -- returns the content of a label, if present.
 --
-env :: Text -> Prod r e Tok a -> Prod r e Tok (Maybe Text, a)
-env kind body = [(l, b) | begin kind, optional tag, l <- label, b <- body, end kind]
+env :: Text -> Prod r e Tok a -> Prod r e Tok (Maybe [Tok], a)
+env kind body = [(t, b) | begin kind, t <- optional tag, optional label, b <- body, end kind]
    where
       tag :: Prod r e Tok [Tok]
       tag = bracket (many (satisfy (/= Close Bracket)))
@@ -279,12 +280,12 @@ env kind body = [(l, b) | begin kind, optional tag, l <- label, b <- body, end k
 -- `env_` is like `env`, but without allowing labels.
 --
 env_ :: Text -> Prod r e Tok a -> Prod r e Tok a
-env_ kind body = [b | begin kind, _ <- label, b <- body, end kind]
+env_ kind body = [b | begin kind, optional label, b <- body, end kind]
 
 -- A label for referencing.
 --
-label :: Prod r e Tok (Maybe Text)
-label = optional [mconcat ls | command "label", ls <- group (many (terminal maybeLabelTok))]
+label :: Prod r e Tok Text
+label = [mconcat ls | command "label", ls <- group (many (terminal maybeLabelTok))]
 
 math :: Prod r String Tok a -> Prod r String Tok a
 math body = [b | begin "math", b <- body, end "math"]

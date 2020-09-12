@@ -86,7 +86,7 @@ data LeanType = LeanType Text [Lean]
 
 -- TODO: This should be a warning!
 instance Semigroup LeanType where
-  _ <> _ = error "Duplicate types"
+  a <> b = throw (LDuplicateTypes (show a) (show b))
 
 data LAssumption
   = LTyped Var LeanType
@@ -163,12 +163,12 @@ extractChain chain@(ChainCons _ r _) = spread <$> (go [] chain >>= conv)
             Word w -> foldl' LPrefixApp (LSymbol w)
             Symbol w -> foldl1 (LInfixApp w)
             Command w -> foldl' LPrefixApp (LSymbol w)
-            _ -> error "Ouch! You used a chain with a weird relator, please open an issue for this!"
+            _ -> throw $ LOuch $ "You used a chain with a weird relator '" ++ show r ++ "'."
       in foldl1 (LConj And) $ map f $ foldl' (\l e -> [e':l' | l' <- l, e' <- e]) [[]] es
 
 extractTerm :: Term -> State ExportState Lean
 extractTerm (TermExpr e) = extractExpr e
-extractTerm (TermFun _) = error "Fun has yet to be implemented"
+extractTerm (TermFun _) = throw LFunNotImplemented
 
 extractNotion :: Notion -> State ExportState (LeanType, [Lean])
 extractNotion (Notion attrLs (BaseNotion (SgPl pat _) terms) mattrR) = do
@@ -215,7 +215,7 @@ extractStmt (StmtAttr t (Attr p ts)) = do
   args <- mapM extractTerm ts
   t' <- extractTerm t
   pure $ foldl' LPrefixApp (LSymbol name) (args ++ [t'])
-extractStmt _ = error "TODO"
+extractStmt _ = throw $ LTODO "extractStmt"
 
 extractAsm :: Asm -> State ExportState [LAssumption]
 extractAsm = \case
@@ -225,8 +225,8 @@ extractAsm = \case
   AsmLetNom vs n -> do
     (t, asm) <- extractNotion n
     pure $ map (\v -> LTyped v t) (toList vs) ++ map LConstraint asm
-  AsmLetIn _ _ -> error asmLetInNotImplemented
-  AsmLetThe _ _ -> error "Fun not implemented"
+  AsmLetIn _ _ -> throw LFunNotImplemented
+  AsmLetThe _ _ -> throw LAsmLetInNotImplemented
   AsmLetEq v e -> do
     expr <- extractExpr e
     pure $ [LConstraint (LEq (LVar v) expr)]
@@ -234,10 +234,10 @@ extractAsm = \case
 fromSimpleTerm :: Term -> Var
 fromSimpleTerm (TermExpr (ExprVar v)) = v
 fromSimpleTerm (TermExpr (ExprChain (ChainBase (ExprVar v :| [])))) = v
-fromSimpleTerm t = error $ "Ouch! This should not have happened. I expected a simple term but got: " ++ show t
+fromSimpleTerm t = throw $ LOuch $ "This should not have happened. I expected a simple term but got: " ++ show t
 
 varsInTerm :: Term -> [Var]
-varsInTerm (TermFun _) = error "Fun has yet to be implemented"
+varsInTerm (TermFun _) = throw LFunNotImplemented
 varsInTerm (TermExpr e') = varsInExpr e'
   where
     varsInExpr = \case 
@@ -259,7 +259,7 @@ varsInDefnHead (DefnAttr mn t (Attr _ ts)) = do
   let v = fromSimpleTerm t
   let vs = concatMap varsInTerm ts
   pure $ [(v, info)] ++ map ((,Nothing)) vs
-varsInDefnHead _ = error "TODO"
+varsInDefnHead _ = throw $ LTODO "varsInDefnHead"
 
 -- | TODO: We currently don't use the edges of the graph.
 mkVars :: [(Var, (VarKind, Maybe LeanType))] 
@@ -288,7 +288,7 @@ exportDeclaration = \case
    ParaTheory  _ -> warn "Theories are not yet implemented" >> pure ""
    ParaDefn defn -> exportDefinition defn
    InstrAsm asm -> exportAssumption asm
-   InstrUse -> error "TODO"
+   InstrUse -> throw $ LTODO "InstrUse"
 
 -- TODO: Should asmConstraints be rendered as variables?
 -- TODO: Some free variable may have been bound by global assumptions.
@@ -308,13 +308,14 @@ exportDefinition (Defn asms dhead stmt) = do
   stmt' <- extractStmt stmt
   let frees = Set.toList $ freeVariables $ stmt' : asmConstraints
   orderedVars <- mkVars (typedVars ++ asmTyped ++ map (,(Implicit, Nothing)) frees)
-  pure $ vsep [hsep ["def", pretty name, exportLeanVars orderedVars, " : Prop :="], 
+  pure $ vsep [hsep ["def", pretty name, exportLeanVars orderedVars, ": Prop :="], 
     indent 2 (exportLean (appendConstraints (asmConstraints ++ varAsms) stmt'))]
 
-exportAxThm :: Doc ann -> Text -> Label -> [Asm] -> Stmt -> Maybe (Doc ann)
+exportAxThm :: Doc ann -> Text -> Tag -> [Asm] -> Stmt -> Maybe (Doc ann)
             -> State ExportState (Doc ann)
 exportAxThm long short nameMay asms stmt proof = do
-  name <- maybe ((\i -> short <> Text.pack (show i)) <$> newLemmaId) pure nameMay
+  name <- maybe ((\i -> short <> Text.pack (show i)) <$> newLemmaId) pure
+    =<< (mapM (getNameFromPattern . fmap Just) nameMay)
   asms' <- concat <$> mapM extractAsm asms
   let asmTyped = flip concatMap asms' $ \case
         LTyped v t -> [(v, (Normal, Just t))]
@@ -326,14 +327,14 @@ exportAxThm long short nameMay asms stmt proof = do
   let frees = Set.toList $ freeVariables $ stmt' : asmConstraints
   orderedVars <- mkVars (asmTyped ++ map (,(Implicit, Nothing)) frees)
   pure $ vsep $ [hsep [long, pretty name, exportLeanVars orderedVars], 
-    indent 2 (" : " <> exportLean (appendConstraints (asmConstraints) stmt'))]
+    indent 2 (":" <+> exportLean (appendConstraints (asmConstraints) stmt'))]
     ++ ((indent 2) <$> maybeToList proof)
 
-exportAxiom :: Label -> Axiom -> State ExportState (Doc ann)
+exportAxiom :: Tag -> Axiom -> State ExportState (Doc ann)
 exportAxiom nameMay (Axiom asms stmt) =
   exportAxThm "axiom" "ax_" nameMay asms stmt Nothing
 
-exportTheorem :: Label -> Thm -> State ExportState (Doc ann)
+exportTheorem :: Tag -> Thm -> State ExportState (Doc ann)
 exportTheorem nameMay (Thm asms stmt) = do
   exportAxThm "theorem" "thm_" nameMay asms stmt (Just ":= sorry")
 
@@ -341,7 +342,7 @@ exportAssumption :: Asm -> State ExportState (Doc ann)
 exportAssumption asm = do
   lasm <- extractAsm asm
   fmap vsep $ forM lasm $ \case
-    LTyped (Var v) t -> pure $ "variable " <> pretty v <> " : " <> exportLeanType t
+    LTyped (Var v) t -> pure $  "variable " <> pretty v <> " : " <> exportLeanType t
     LConstraint l -> do 
       i <- newConstantId
       pure $ "constant c_" <> pretty (show i) <> " : " <> exportLean l
@@ -387,7 +388,7 @@ exportLean = \case
   (LNumber t) -> pretty t
   (LSymbol t) -> pretty t
   (LQuant q vs mt l) -> hsep $ (exportQuant q) : ((pretty . unVar) <$> toList vs) 
-    ++ (((" : " <>) . exportLeanType) <$> maybeToList mt) ++ [",", exportLean l]
+    ++ (((":" <+>) . exportLeanType) <$> maybeToList mt) ++ [",", exportLean l]
   (LConj c l1 l2) -> hsep ["(", exportLean l1, exportConj c, exportLean l2, ")"]
   (LNot l) -> "¬" <> exportLean l
   (LEq l1 l2) -> exportLean l1 <+> "=" <+> exportLean l2
@@ -400,6 +401,7 @@ preamble = Text.intercalate "\n"
    , "notation `∀∞` binders `, ` r:(scoped P, almost_all_nat P) := r"
    , ""
    , "notation `natural_number` := ℕ"
+   , "notation `rational_number` := ℕ"
    , "def divides {α} := @has_dvd.dvd α"
    , "def neq {α} (a : α) (b) := a ≠ b"
    ]
@@ -408,8 +410,22 @@ preamble = Text.intercalate "\n"
 -- Error messages
 -- ========================================================================= --
 
-asmLetInNotImplemented :: String
-asmLetInNotImplemented =
-     "The Lean backend does not support statements of the form $n\\in\\natural_number$\n"
-  <> "since arbitrary set inclusions can not be represented well in type theory.\n"
-  <> "Try using 'Let k be a natural number'-like syntax instead."
+data LException
+  = LTODO String
+  | LAsmLetInNotImplemented
+  | LFunNotImplemented
+  | LOuch String
+  | LDuplicateTypes String String
+  deriving (Eq, Show)
+
+instance Exception LException where
+  displayException = \case
+    LTODO s -> "TODO: " <> s
+    LAsmLetInNotImplemented -> 
+        "The Lean backend does not support statements of the form $n\\in\\natural_number$\n"
+      <> "since arbitrary set inclusions can not be represented well in type theory.\n"
+      <> "Try using 'Let k be a natural number'-like syntax instead."
+    LFunNotImplemented ->
+        "The 'Fun' feature has not yet been implemented"
+    LOuch t -> "Ouch! " <> t <> " Please open an issue here: github.com/adelon/nave"
+    LDuplicateTypes a b -> "A variables was declared with two different types: " <> a <> " and " <> b

@@ -45,7 +45,7 @@ addList :: Semigroup a => [(Var, a)] -> ContextGraph a -> ContextGraph a
 addList [] g = g
 addList ((v, a):xs) g = go (addNode v a g) v xs
   where
-    go g last [] = g
+    go g _ [] = g
     go g last ((w, a):xs) = go (fromJust $ addEdgeMay last w $ addNode w a g) w xs
 
 addBag :: Semigroup a => [(Var, a)] -> ContextGraph a -> ContextGraph a

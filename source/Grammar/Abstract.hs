@@ -220,13 +220,13 @@ data Proof
    = Proof [ProofStep]
    deriving (Show, Eq)
 
--- Optional labels: '\begin{<env>}\label{<label>}'.
-type Label = Maybe Text
+-- Optional tag: '\begin{<env>}[<tag>]'.
+type Tag = Maybe [Tok]
 
 data Para
-   = ParaAxiom Label Axiom
-   | ParaThm Label Thm
-   | ParaProof Label Proof
+   = ParaAxiom Tag Axiom
+   | ParaThm Tag Thm
+   | ParaProof Tag Proof
    | ParaDefn Defn
    | ParaTheory Theory
    | InstrAsm Asm

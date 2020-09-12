@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -fplugin=Comprehension.Plugin #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- Pattern scanning for manual definitions from the preamble and for
 -- automatic pattern recognition from definitions in the document.
@@ -9,11 +10,13 @@ module Scan where
 import Base
 import Grammar.Abstract
 import Grammar.Concrete (env_, math, maybeVarTok)
+import Grammar.Lexicon
 import Grammar.Literals
 
 
 import Text.Earley (Grammar, Prod, rule, satisfy, terminal)
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 
 
 data ScanPattern
@@ -101,3 +104,52 @@ patToken = satisfy \case
    _token       -> False
    where
       keywords = Set.fromList ["a", "an", "is", "are", "if", "iff"]
+
+-- Basic paradigms for pluralizations of nominals.
+-- TODO Some kind of regex approach or using is less painful.
+--
+guessNominalPlural :: Pattern -> SgPl Pattern
+guessNominalPlural pat = SgPl pat (pluralize pat)
+   where
+      pluralize :: Pattern -> Pattern
+      pluralize = \case
+         Just (Word w) : pat'@(Just w' : _) | isPreposition w' -> Just (Word (Text.snoc w 's')) : pat'
+         [Just (Word w)] -> [Just (Word (Text.snoc w 's'))]
+         [tok, Just (Word w)] -> [tok, Just (Word (Text.snoc w 's'))]
+         [tok, tok', Just (Word w)] -> [tok, tok', Just (Word (Text.snoc w 's'))]
+         pat' -> pat'
+
+isAttrR :: Pattern -> Bool
+isAttrR = containsPreposition
+   where
+      containsPreposition :: Pattern -> Bool
+      containsPreposition pat = any isPreposition (catMaybes pat)
+
+isPreposition :: Tok -> Bool
+isPreposition w = Set.member w (Set.map Word prepositions)
+
+
+-- Takes the scanned patterns and inserts them in the correct
+-- places in a lexicon.
+--
+extendLexicon :: [ScanPattern] -> Lexicon -> Lexicon
+extendLexicon [] lexicon = lexicon
+--
+--        Only add patterns that are fresh to avoid duplication.
+--                                                 vvvvvvvvvvvvv
+extendLexicon (scan : scans) lexicon@Lexicon{..} | notFresh scan = extendLexicon scans lexicon
+   where
+      notFresh :: ScanPattern -> Bool
+      notFresh = \case
+         ScanAttr pat -> Set.member pat lexiconAttrLs || Set.member pat lexiconAttrRs
+         ScanNotion pat -> Set.member pat (Set.map sg lexiconNoms)
+         ScanFun pat -> Set.member pat (Set.map sg lexiconFuns)
+         ScanVerb pat -> Set.member pat (Set.map sg lexiconVerbs)
+--
+extendLexicon (scan : scans) lexicon@Lexicon{..} = case scan of
+   ScanAttr pat | isAttrR pat -> extendLexicon scans lexicon{lexiconAttrRs = Set.insert pat lexiconAttrRs}
+   ScanAttr pat -> extendLexicon scans lexicon{lexiconAttrLs = Set.insert pat lexiconAttrLs}
+   --
+   -- TODO adding patterns with grammatical number (SgPL).
+   --
+   _ -> extendLexicon scans lexicon

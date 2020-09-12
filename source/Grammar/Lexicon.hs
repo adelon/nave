@@ -124,7 +124,6 @@ builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
    , "monotone"
    , "nonzero"
    , "odd"
-   , "prime"
    , "reflexive"
    , "surjective"
    , "transitive"
@@ -132,8 +131,7 @@ builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
 
 builtinAttrRs :: Set Pattern
 builtinAttrRs = Set.map unsafeReadPattern (Set.fromList
-   [ "coprime to ?"
-   , "of finite order"
+   [ "of finite order"
    , "of finite type"
    , "pointwise bounded by ? on ?"
    ])
@@ -153,7 +151,8 @@ builtinVerbs = Set.map unsafeReadPatternSgPl (Set.fromList
 --
 builtinNominals :: Set (SgPl Pattern)
 builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
-   [ "complete lattice[/s]"
+   [ "arithmetic[/s]"
+   , "complete lattice[/s]"
    , "lattice[/s]"
    , "group[/s]"
    , "monoid[/s]"
@@ -212,8 +211,7 @@ prepositions = Set.fromList
    , "across"
    , "after"
    , "against"
-   , "along"
-   , "alongside"
+   , "along", "alongside"
    , "amid", "amidst"
    , "among"
    , "around"
@@ -229,10 +227,14 @@ prepositions = Set.fromList
    , "beyond"
    , "but"
    , "by"
+   , "except"
    , "for"
    , "from"
    , "in", "inside", "into"
+   , "like"
+   , "modulo", "mod"
    , "near"
+   , "next"
    , "of"
    , "off"
    , "on"
@@ -242,6 +244,7 @@ prepositions = Set.fromList
    , "over"
    , "past"
    , "per"
+   , "sans"
    , "till"
    , "to"
    , "under"

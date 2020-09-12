@@ -5,7 +5,7 @@ import Grammar.Concrete
 import Grammar.Lexicon (builtins)
 import Lex
 import Scan
-import Export.Lean (export)
+import Export.Lean (export, LException)
 
 import System.Directory (createDirectoryIfMissing, getDirectoryContents)
 import Text.Earley (parser, fullParses)
@@ -15,6 +15,7 @@ import Text.Pretty.Simple (pShowNoColor)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy.IO as LazyText
+import qualified Control.Exception as Exception
 
 main :: IO ()
 main = do
@@ -32,9 +33,10 @@ getFiles dir = do
 work :: FilePath -> IO ()
 work file = do
    let inPath = "examples/" <> file
-   let outPath = "examples/" <> file <> ".out"
+   let outPath = "debug/" <> file <> ".out"
    let leanPath = "examples/" <> file <> ".lean"
    let tokPath = "debug/" <> file <> ".tokens"
+   let lexiconPath = "debug/" <> file <> ".lexicon"
    let scanPath = "debug/" <> file <> ".scans"
    putStrLn ("Parsing '" <> inPath <> "'.")
    tokenResult <- tokenize inPath
@@ -48,19 +50,31 @@ work file = do
          -- Remove raw source and location information for now.
          let simpleStream = fmap unLocated (unTokStream stream)
          let scanResult = fullParses (parser scanner) simpleStream
+         let scans = case scanResult of
+               ([s], _) -> s
+               _        -> impossible "scanner should have unambiguous grammar"
          --
          -- Write scanned patterns to a file.
          Text.writeFile scanPath (Text.pack (show scanResult))
          --
+         -- Update the lexicon and dump its contents for debugging.
+         let lexicon = extendLexicon scans builtins
+         LazyText.writeFile lexiconPath (pShowNoColor lexicon)
+         --
          -- Write the parse tree to a file.
-         let parseResult = fullParses (parser (grammar builtins)) simpleStream
+         let parseResult = fullParses (parser (grammar lexicon)) simpleStream
          LazyText.writeFile outPath (pShowNoColor parseResult)
          --
          -- Translate to lean.
          case fst parseResult of
-           [] -> pure ()
-           (ps:_) -> Text.writeFile leanPath (export ps builtins)
-
+            [] -> pure ()
+            (ps:_) -> do 
+               exported <- Exception.try (Exception.evaluate $ export ps builtins)
+               case exported of
+                  Right doc -> Text.writeFile leanPath doc
+                  Left (e :: LException) -> do
+                     writeFile leanPath (Exception.displayException e)
+                     putStrLn (Exception.displayException e)
 
 dumpTokens :: TokStream -> Text
 dumpTokens = Text.pack . show . fmap unLocated . unTokStream
