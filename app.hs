@@ -1,17 +1,10 @@
 module Main where
 
 import Base
-import Grammar.Concrete
-import Grammar.Lexicon (builtins)
-import Lex
-import Scan
-import Export.Lean (export, LException)
-
-import System.Directory (createDirectoryIfMissing, getDirectoryContents)
-import Text.Earley (parser, fullParses)
-import Text.Megaparsec
+import qualified Nave
 import Text.Pretty.Simple (pShowNoColor)
 
+import System.Directory (createDirectoryIfMissing, getDirectoryContents)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy.IO as LazyText
@@ -23,7 +16,6 @@ main = do
    createDirectoryIfMissing createParents "debug/"
    files <- getFiles "examples/"
    mapM_ work files
-
 
 getFiles :: FilePath -> IO [FilePath]
 getFiles dir = do
@@ -39,50 +31,38 @@ work file = do
    let lexiconPath = "debug/" <> file <> ".lexicon"
    let scanPath = "debug/" <> file <> ".scans"
    putStrLn ("Parsing '" <> inPath <> "'.")
-   tokenResult <- tokenize inPath
+   tokenResult <- Nave.tokenize inPath <$> Text.readFile inPath
    case tokenResult of
-      Left err -> Text.writeFile tokPath (Text.pack (errorBundlePretty err))
+      Left err -> Text.writeFile tokPath (Text.pack err)
       Right stream -> do
          --
          -- Dump token stream into a file for debugging.
          Text.writeFile tokPath (dumpTokens stream)
          --
          -- Remove raw source and location information for now.
-         let simpleStream = fmap unLocated (unTokStream stream)
-         let scanResult = fullParses (parser scanner) simpleStream
-         let scans = case scanResult of
-               ([s], _) -> s
-               _        -> impossible "scanner should have unambiguous grammar"
+         let scans = Nave.scan stream
          --
          -- Write scanned patterns to a file.
-         Text.writeFile scanPath (Text.pack (show scanResult))
+         Text.writeFile scanPath (Text.pack (show scans))
          --
          -- Update the lexicon and dump its contents for debugging.
-         let lexicon = extendLexicon scans builtins
+         let lexicon = Nave.extendLexicon scans Nave.builtins
          LazyText.writeFile lexiconPath (pShowNoColor lexicon)
          --
          -- Write the parse tree to a file.
-         let parseResult = fullParses (parser (grammar lexicon)) simpleStream
+         let parseResult = Nave.parse lexicon stream
          LazyText.writeFile outPath (pShowNoColor parseResult)
          --
          -- Translate to lean.
-         case fst parseResult of
-            [] -> pure ()
-            (ps:_) -> do 
-               exported <- Exception.try (Exception.evaluate $ export ps builtins)
-               case exported of
-                  Right doc -> Text.writeFile leanPath doc
-                  Left (e :: LException) -> do
+         case parseResult of
+            Left _ -> pure ()
+            Right ps -> do
+               l <- Nave.exportLean ps
+               case l of
+                  Right lean -> Text.writeFile leanPath lean
+                  Left e -> do
                      writeFile leanPath (Exception.displayException e)
                      putStrLn (Exception.displayException e)
 
-dumpTokens :: TokStream -> Text
-dumpTokens = Text.pack . show . fmap unLocated . unTokStream
-
-tokenize :: FilePath -> IO (Either (ParseErrorBundle Text Void) TokStream)
-tokenize path = do
-   raw <- Text.readFile path
-   let result = runParser toks path raw
-   case result of
-      Left err -> pure (Left err)
-      Right stream -> pure (Right (TokStream raw stream))
+dumpTokens :: Nave.TokStream -> Text
+dumpTokens = Text.pack . show . Nave.simpleStream
