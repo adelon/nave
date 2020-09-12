@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Nave 
   ( tokenize, scan, parse, TokStream
   , simpleStream, exportLean, compileLean

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS -Wno-name-shadowing #-}
 
 module Export.ContextGraph where
