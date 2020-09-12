@@ -69,6 +69,7 @@ getNameFromPattern = go False "" . reverse
     go us t (Just (Word p) : ps) = go True (add_ us p <> t) ps
     go _ t (Just (Symbol p) : ps) = go False (p <> t) ps
     go _ t (Just (Number p) : ps) = go False (p <> t) ps
+    go _ t (Just (Command p) : ps) = go False (p <> t) ps
     go us t (Just p : ps) = warn ("Ignored token in pattern: " <> Text.pack (show p)) >> go us t ps
 
     add_ True = (<> "_")
@@ -98,6 +99,7 @@ data Quant = QAll | QMost | QSome | QNone | QUniq
 
 data Lean = LVar Var
   | LPrefixApp Lean Lean  -- ^ LPrefixApp "f" "a"
+  | LParen Lean
   | LNot Lean
   | LInfixApp Text Lean Lean -- ^ LInfixApp "+" "a" "b"
   | LNumber Text
@@ -121,6 +123,7 @@ freeVars bound acc = \case
           Just (LeanType _ ls) -> foldl' (freeVars bound) acc ls
           Nothing -> acc
     in freeVars (bound <> Set.fromList (toList vs)) acc' l
+  LParen l -> freeVars bound acc l
   LConj _ l1 l2 -> freeVars bound (freeVars bound acc l2) l1
   LEq l1 l2 -> freeVars bound (freeVars bound acc l2) l1
 
@@ -224,7 +227,8 @@ extractAsm = \case
     pure $ [LConstraint stmt]
   AsmLetNom vs n -> do
     (t, asm) <- extractNotion n
-    pure $ map (\v -> LTyped v t) (toList vs) ++ map LConstraint asm
+    pure $ map (\v -> LTyped v t) (toList vs) 
+      ++ map (\x -> LConstraint $ foldl' LPrefixApp x $ (fmap LVar . toList) vs) asm
   AsmLetIn _ _ -> throw LFunNotImplemented
   AsmLetThe _ _ -> throw LAsmLetInNotImplemented
   AsmLetEq v e -> do
@@ -308,8 +312,14 @@ exportDefinition (Defn asms dhead stmt) = do
   stmt' <- extractStmt stmt
   let frees = Set.toList $ freeVariables $ stmt' : asmConstraints
   orderedVars <- mkVars (typedVars ++ asmTyped ++ map (,(Implicit, Nothing)) frees)
-  pure $ vsep [hsep ["def", pretty name, exportLeanVars orderedVars, ": Prop :="], 
-    indent 2 (exportLean (appendConstraints (asmConstraints ++ varAsms) stmt'))]
+  let (headerVars, forallVars) = List.partition (\(_,(x,_)) -> x==Normal) orderedVars
+  pure $ vsep [hsep ["def", pretty name, exportLeanVars headerVars, ": Prop :="], 
+    indent 2 (exportLean (forall forallVars $ appendConstraints (asmConstraints ++ varAsms) stmt'))]
+
+-- | TODO: handle types.
+forall :: [(Var, (VarKind, Maybe LeanType))] -> Lean -> Lean
+forall [] = id
+forall ((v,_):vs) = LQuant QAll (v :| map fst vs) Nothing
 
 exportAxThm :: Doc ann -> Text -> Tag -> [Asm] -> Stmt -> Maybe (Doc ann)
             -> State ExportState (Doc ann)
@@ -381,17 +391,36 @@ exportLeanType :: LeanType -> Doc ann
 exportLeanType (LeanType t ts) = exportLean $ foldl' (LPrefixApp) (LSymbol t) ts
 
 exportLean :: Lean -> Doc ann
-exportLean = \case
-  (LVar (Var t)) -> pretty t
-  (LPrefixApp l1 l2) -> hsep [exportLean l1, exportLean l2]
-  (LInfixApp t l1 l2) -> hsep ["(", exportLean l1, pretty t, exportLean l2, ")"]
-  (LNumber t) -> pretty t
-  (LSymbol t) -> pretty t
-  (LQuant q vs mt l) -> hsep $ (exportQuant q) : ((pretty . unVar) <$> toList vs) 
-    ++ (((":" <+>) . exportLeanType) <$> maybeToList mt) ++ [",", exportLean l]
-  (LConj c l1 l2) -> hsep ["(", exportLean l1, exportConj c, exportLean l2, ")"]
-  (LNot l) -> "¬" <> exportLean l
-  (LEq l1 l2) -> exportLean l1 <+> "=" <+> exportLean l2
+exportLean = go . pp
+  where
+    go = \case
+      (LParen l) -> "(" <> go l <> ")"
+      (LVar (Var t)) -> pretty t
+      (LPrefixApp l1 l2) ->  go l1 <+> go l2
+      (LInfixApp t l1 l2) -> go l1 <+> pretty t <+> go l2
+      (LNumber t) -> pretty t
+      (LSymbol t) -> pretty t
+      (LQuant q vs mt l) -> (exportQuant q) <> hsep (((pretty . unVar) <$> toList vs) 
+        ++ (((":" <+>) . exportLeanType) <$> maybeToList mt)) <> "," <+> go l
+      (LConj c l1 l2) -> go l1 <+> exportConj c <+> go l2
+      (LNot l) -> "¬" <> go l
+      (LEq l1 l2) -> go l1 <+> "=" <+> go l2
+
+    -- TODO: make this nicer
+    -- Add parens where necessary
+    pp = \case
+      (LParen l) -> pp l
+      l@(LVar _) -> l
+      l@(LNumber _) -> l
+      l@(LSymbol _) -> l
+      (LNot l) -> LNot $ LParen $ pp l
+      (LEq l1 l2) -> LEq (LParen $ pp l1) (LParen $ pp l2)
+      (LPrefixApp l1@(LPrefixApp _ _) l2) -> LPrefixApp (pp l1) (LParen $ pp l2)
+      (LPrefixApp l1@(LSymbol _) l2) -> LPrefixApp (pp l1) (LParen $ pp l2)
+      (LPrefixApp l1 l2) -> LPrefixApp (LParen $ pp l1) (LParen $ pp l2)
+      (LInfixApp t l1 l2) -> LInfixApp t (LParen $ pp l1) (LParen $ pp l2)
+      (LConj c l1 l2) -> LConj c (LParen (pp l1)) (LParen (pp l2))
+      (LQuant q vs mt l) -> LQuant q vs mt (LParen $ pp l)
 
 preamble :: Text
 preamble = Text.intercalate "\n"
@@ -404,6 +433,7 @@ preamble = Text.intercalate "\n"
    , "notation `rational_number` := ℕ"
    , "def divides {α} := @has_dvd.dvd α"
    , "def neq {α} (a : α) (b) := a ≠ b"
+   , "def mul {α} := @has_mul.mul α"
    ]
 
 -- ========================================================================= --
