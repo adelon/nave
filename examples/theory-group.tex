@@ -3,3 +3,34 @@
    equipped with $\mul : A\to A\to A$
    such that $\mul$ is associative.
 \end{theory}
+
+
+\begin{theory}
+   An unital magma is a set $A$
+   together with $\mul : A\to A\to A$,
+   and $\unit : A$
+   such that $\mul$ is associative
+   and for all $a$ we have $\unit\mul a = a = a\mul\unit$.
+\end{theory}
+
+% Should induce the following in the type theoretical interpretation:
+% * a predicate `isMagmaHom'
+% * a type `MagmaHom' of all the functions satisfying `isMagmaHom'.
+%
+\begin{definition}
+   Let $A$ be a magma.
+   Let $B$ be a magma.
+   Let $f : A\to B$.
+   We say that $f$ is a magma homomorphism from $A$ to $B$ if
+   for all $a, b$ we have $f(a\mul b) = f(a)\mul f(b)$.
+\end{definition}
+
+
+\begin{theorem}
+   Let $A$ be a magma.
+   Let $B$ be a magma.
+   Let $C$ be a magma.
+   Let $f$ be a magma homomorphism from $A$ to $B$.
+   Let $g$ be a magma homomorphism from $B$ to $C$.
+   Then $g\circ f$ is a magma homomorphism from $A$ to $B$.
+\end{theorem}

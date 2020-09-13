@@ -49,9 +49,9 @@ scanner = do
 -- Concrete patterns. The leading var and following keywords (`_is`/`_is, _an`)
 -- serve to differentiate the different kinds of patterns.
 -- vvvvvv
-   attr   <- rule [ScanAttr p | var, _is, p <- pat, _iff]
-   notion <- rule [ScanNotion p | var, _is, _an, p <- pat, _iff]
-   verb   <- rule [ScanVerb p | var, p <- pat, _iff]
+   attr   <- rule [ScanAttr p | var, _is, p <- pat, _iff <|> _if]
+   notion <- rule [ScanNotion p | var, _is, _an, p <- pat, _iff <|> _if]
+   verb   <- rule [ScanVerb p | var, p <- pat, _iff <|> _if]
    scan   <- rule (attr <|> notion <|> verb)
 --
 -- We only care about the pattern content of definitions, and not the rest of the definition.

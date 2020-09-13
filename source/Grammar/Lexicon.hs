@@ -75,6 +75,7 @@ builtinOperators =
    [ [(binOp (Command "glb"), LeftAssoc)]
    , [(binOp (Command "lub"), LeftAssoc)]
    , [(binOp (Symbol "+"), LeftAssoc)]
+   , [(binOp (Command "circ"), LeftAssoc)]
    , [(binOp (Command "mul"), LeftAssoc)]
    ]
 
@@ -172,6 +173,7 @@ builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    , "seminorm[/s] on ?"
    , "subspace[/s] of ?"
    , "vector space[/s] over ?"
+   , "magma homomorphism[/s] from ? to ?"
    ])
 
 

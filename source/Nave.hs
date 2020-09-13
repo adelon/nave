@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Nave 
+module Nave
   ( tokenize, scan, parse, TokStream
   , simpleStream, exportLean, compileLean
   , builtins, extendLexicon
@@ -38,10 +38,10 @@ tokenize path raw = case runParser toks path raw of
 
 scan :: TokStream -> [ScanPattern]
 scan stream = case fullParses (parser scanner) (simpleStream stream) of
-   ([s], _) -> s
+   (_, _) -> []
    _        -> impossible "scanner should have unambiguous grammar"
 
-parse :: Lexicon -> TokStream -> Either ParseException [Para] 
+parse :: Lexicon -> TokStream -> Either ParseException [Para]
 parse lexicon stream = case fullParses (parser (grammar lexicon)) (simpleStream stream) of
    (_, r@(Report _ _ (_:_))) -> Left $ UnconsumedTokens r
    ([], _) -> Left $ EmptyParse
@@ -52,7 +52,7 @@ simpleStream :: TokStream -> [Tok]
 simpleStream stream = fmap unLocated (unTokStream stream)
 
 exportLean :: [Para] -> IO (Either LException Text.Text)
-exportLean ps = 
+exportLean ps =
    Exception.try (Exception.evaluate $ export ps builtins)
 
 data ParseException

@@ -87,7 +87,7 @@ grammar lexicon@Lexicon{..} = mdo
 -- variables on one side. They express judgements.
 --
    assignment  <- rule [(x, e) | x <- var, _eq <|> _defeq, e <- formula]
-   typing      <- rule [(xs, e) | xs <- vars, _in, e <- formula]
+   typing      <- rule [(xs, e) | xs <- vars, _in <|> _colon, e <- formula]
 
 
 -- Patterns always allow full terms as arguments. If stricter conditions are
