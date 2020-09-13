@@ -61,10 +61,11 @@ builtins = Lexicon
 builtinIdens :: Set Tok
 builtinIdens = Set.fromList
    [ Command "naturals"
+   , Command "powerset"
+   , Command "quotient"
    , Command "rationals"
    , Command "reals"
-   , Command "quotient"
-   , Command "powerset"
+   , Command "unit"
    ]
 
 
@@ -79,7 +80,7 @@ builtinOperators =
 
 
 builtinIsolOperators :: Set Tok
-builtinIsolOperators = Set.fromList [Command "mul", Symbol "+"]
+builtinIsolOperators = Set.fromList [Command "mul", Command "unit", Symbol "+"]
 
 
 builtinRelators :: Set Relator
@@ -153,14 +154,16 @@ builtinNominals :: Set (SgPl Pattern)
 builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "arithmetic[/s]"
    , "complete lattice[/s]"
-   , "lattice[/s]"
    , "group[/s]"
+   , "lattice[/s]"
+   , "magma[/s]"
    , "monoid[/s]"
    , "natural number[/s]"
    , "rational number[/s]"
    , "ring[/s]"
    , "semigroup[/s]"
    , "set[/s]"
+   , "unital magma[/s]"
    , "divisor[/s] of ?"
    , "endomorphism[/s] of ?"
    , "fixed point[/s] of ?"

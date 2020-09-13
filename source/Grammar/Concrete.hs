@@ -28,6 +28,7 @@ import Text.Earley.Mixfix (mixfixExpression)
 
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.List.NonEmpty as NonEmpty
 
 
 
@@ -169,9 +170,10 @@ grammar lexicon@Lexicon{..} = mdo
    -- In the future there needs to be dedicated functionality to handle isolated operators.
    -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
    theoryHead   <- rule [(t, t', v) | _an, t <- notion, _extends, t' <- notion, v <- optional (math var)]
-   theoryOps    <- rule $ math [[(f, ty)] | f <- cmd, _colon, ty <- formula]
+   theoryOp     <- rule $ math [(f, ty) | f <- cmd, _colon, ty <- formula]
+   theoryOps    <- rule [NonEmpty.toList fs | _equipped, fs <- signatureList theoryOp]
    theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])
-   theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, _equipped, fs <- theoryOps, as <- theoryAxioms]
+   theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, fs <- theoryOps, as <- theoryAxioms]
 
 -- TODO Decide on reference format and implement this production rule.
 --
@@ -306,6 +308,15 @@ word w = token (Word w) <?> Text.unpack w
 commaSep :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
 commaSep item = [i:|is | i <- item, is <- many (_comma *> item)]
 
+-- Nonempty textual lists of the form "a, b, c, and d".
+-- The final comma is mandatory, 'and' is not.
+-- Also allows "a and b". Should therefore be avoided in contexts where
+-- a logical conjunction would also be possible.
+-- Currently also allows additionals 'and's after each comma...
+--
+signatureList :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
+signatureList item = [i:|is | i <- item, is <- many (_commaAnd *> item)]
+   <|> [i:|[j] | i <- item, _and, j <- item]
 
 maybeVarTok :: Tok -> Maybe Var
 maybeVarTok = \case

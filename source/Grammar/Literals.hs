@@ -60,6 +60,7 @@ module Grammar.Literals
    -- Symbols
    , _colon
    , _comma
+   , _commaAnd
    , _defeq
    , _dot
    , _eq
@@ -83,7 +84,7 @@ _an = w "a" <|> w "an"
 _and = w "and"
 _are = w "are"
 _be = w "be"
-_equipped = optional (w "equipped") *>  "with"
+_equipped = optional (w "equipped" <|> w "together") *>  "with"
 _every = optional (w "for") *> w "every"
 _exists = w "there" *> w "exists"
 _extends = (_is *> _an) <|> (w "consists" *> w "of" *> _an)
@@ -112,6 +113,7 @@ _write = (optional (w "we") *> w "say" <* optional (w "that")) <|> (optional (w 
 
 _colon = token (Symbol ":") <?> (":" :: String)
 _comma = token (Symbol ",") <?> ("," :: String)
+_commaAnd = token (Symbol ",") <* optional (w "and") <?> ("," :: String)
 _defeq = token (Symbol ":=") <?> (":=" :: String) -- Should use `\coloneq` from unicode-math as display.
 _dot = token (Symbol ".") <?> ("." :: String)
 _eq = token (Symbol "=") <?> ("=" :: String)
