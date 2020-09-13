@@ -170,10 +170,11 @@ grammar lexicon@Lexicon{..} = mdo
    -- In the future there needs to be dedicated functionality to handle isolated operators.
    -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
    theoryHead   <- rule [(t, t', v) | _an, t <- notion, _extends, t' <- notion, v <- optional (math var)]
-   theoryOp     <- rule $ math [(f, ty) | f <- cmd, _colon, ty <- formula]
-   theoryOps    <- rule [NonEmpty.toList fs | _equipped, fs <- signatureList theoryOp]
+   theoryFun    <- rule $ math [(f, ty) | f <- cmd, _colon, ty <- formula]
+   theoryRel    <- rule [(r, ExprConst "RELATION") | _an, n <- arity, word "relation", r <- math cmd]
+   theorySig    <- rule [NonEmpty.toList fs | _equipped, fs <- signatureList (theoryFun <|> theoryRel)]
    theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])
-   theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, fs <- theoryOps, as <- theoryAxioms]
+   theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, fs <- theorySig, as <- theoryAxioms]
 
 -- TODO Decide on reference format and implement this production rule.
 --

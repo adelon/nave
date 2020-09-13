@@ -1,5 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -fplugin=Comprehension.Plugin #-}
+
 
 -- This module defines lots of keywords, introduction sequences
 -- and various filler phrases. Collectively we call them 'literals'.
@@ -27,7 +29,8 @@
 -- a literal, lest the grammar becomes needlessly ambiguous!
 --
 module Grammar.Literals
-   ( _all
+   ( arity
+   , _all
    , _an
    , _and
    , _are
@@ -71,13 +74,16 @@ module Grammar.Literals
 import Base
 import Grammar.Abstract (Tok(..))
 
-import Text.Earley ((<?>), token)
+import Text.Earley (Prod, (<?>), token)
 
 import qualified Data.Text as Text
 
 
 w lit = token (Word lit) <?> Text.unpack lit
 
+arity :: Prod r String Tok Integer
+arity = [1 | w "unary"] <|> [2 | w "binary"] <|> [3 | w "ternary"] <|> [4 | w "quaternary"] <|> [5 | w "quinary"]
+   <|> [6 | w "senary"] <|> [7 | w "septenary"] <|> [8 | w "octonary"] <|> [9 | w "nonary"] <|> [10 | w "denary"]
 
 _all = optional (w "for") *> w "all"
 _an = w "a" <|> w "an"

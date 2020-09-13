@@ -155,6 +155,7 @@ builtinNominals :: Set (SgPl Pattern)
 builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "arithmetic[/s]"
    , "complete lattice[/s]"
+   , "geometr[y/ies]"
    , "group[/s]"
    , "lattice[/s]"
    , "magma[/s]"

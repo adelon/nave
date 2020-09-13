@@ -1,0 +1,39 @@
+% Tarski Geometry à la Beeson
+%
+% See https://arxiv.org/pdf/1407.4399.pdf
+%
+\begin{theory}
+   A geometry is a set $A$
+   equipped with
+   a ternary relation $\Betw$
+   and a quaternary relation $\Cong$
+   such that
+   %
+   % Free variables are implicitly universally quantified.
+   \begin{axioms}
+      \axiom[Reflexivity of equidistance]
+         $\Cong(a,b,c,d)$.
+      \axiom[Transitivity of equidistance]
+         If $\Cong(a,b,p,q)$ and $\Cong(a,b,r,s)$,
+         then $\Cong(p,q,r,s)$.
+      \axiom[Identity of equidistance]
+         If $\Cong(a,b,c,c)$, then $a = b$.
+      \axiom[Segment extension]
+         If $q\new a$, then there exists $x$
+         such that $\StrictBetw(q,a,x)$ and $\Cong(a,x,b,c)$.
+      \axiom[Five-segment]
+         If $x\neq y$, $\Betw(x, y, z)$, $\Betw(p, q, r)$,
+         $\Cong(x, y, p, q)$, $\Cong(y, z, q, r)$,
+         $\Cong(x, u, x, v)$, and $\Cong(y, u, q, v)$,
+         then $\Cong(z, u, r, v)$.
+      \axiom[Identity of betweenness]
+         It is not the case that $\Betw(a, b, a)$.
+      \axiom[Inner Pasch] % Strict!
+         If $\Betw(a, p, c)$, $\StrictBetw(b, q, c)$,
+         and $\lnot\Col(a, b, c)$,
+         then there exists $x$ such that
+         $\Betw(p, x, b)$ and $\Betw(q, x, a)$.
+   \end{axioms}
+   where
+   % TODO define strict in betweenness.
+\end{theory}
