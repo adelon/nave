@@ -125,6 +125,7 @@ builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
    , "confluent"
    , "even"
    , "injective"
+   , "locally confluent"
    , "monotone"
    , "nonzero"
    , "odd"

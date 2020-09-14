@@ -1,0 +1,35 @@
+\begin{definition}
+   Let $r$ be a relation on $A$.
+   Let $t$ be the reflexive transitive closure of $r$.
+   We say that $r$ is locally confluent if
+   for all $a, b, c$ if $r(a, b)$ and $r(a, b)$,
+   then there exists $d$ such that
+   $t(b, d)$ and $t(c, d)$.
+\end{definition}
+
+
+\begin{definition}
+   Let $r$ be a relation on $A$.
+   Let $t$ be the reflexive transitive closure of $r$.
+   We say that $r$ is confluent if
+   for all $a, b, c$ if $t(a, b)$ and $t(a, b)$,
+   then there exists $d$ such that
+   $t(b, d)$ and $t(c, d)$.
+\end{definition}
+
+
+% Transitive closure is available as 'tc' from the Lean StdLib.
+% Well-founded is available as 'well_founded'.
+\begin{definition}
+   Let $r$ be a relation on $A$.
+   Let $t$ be the transitive closure of $r$.
+   We say that $R$ is terminating if $t$ is well founded.
+\end{definition}
+
+
+\begin{theorem}
+   Let $A$ be a set.
+   Let $r$ be a relation on $A$.
+   If $r$ is well founded and $r$ is locally confluent,
+   then $r$ is confluent.
+\end{theorem}

@@ -116,7 +116,8 @@ _suchThat = w "such" *> w "that"
 _suppose = w "suppose" <* optional (w "that")
 _the = w "the"
 _then = w "then"
-_throughout = (w "throughout" <* optional (w "this" *> w "section") <|> (w "in" *> w "the" *> w "sequel"))
+_throughout = w "throughout" <* optional (w "this" *> w "section") <* optional _comma
+   <|> (w "in" *> w "the" *> w "sequel")
 _thus = w "thus"
 _write = (optional (w "we") *> w "say" <* optional (w "that")) <|> (optional (w "we") *> w "write")
 
