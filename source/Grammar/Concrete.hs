@@ -171,7 +171,8 @@ grammar lexicon@Lexicon{..} = mdo
    -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
    theoryHead   <- rule [(t, t', v) | _an, t <- notion, _extends, t' <- notion, v <- optional (math var)]
    theoryFun    <- rule $ math [(f, ty) | f <- cmd, _colon, ty <- formula]
-   theoryRel    <- rule [(r, ExprConst "RELATION") | _an, n <- arity, word "relation", r <- math cmd]
+   theoryRel    <- rule ([(r, ExprConst "REL") | _an, n <- arity, _relation, r <- math cmd]
+                     <|> [(r, ExprConst "EndRel" `ExprApp` ExprVar a) | _an, _relation, r <- math cmd, _on, a <- math var])
    theorySig    <- rule [NonEmpty.toList fs | _equipped, fs <- signatureList (theoryFun <|> theoryRel)]
    theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])
    theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, fs <- theorySig, as <- theoryAxioms]

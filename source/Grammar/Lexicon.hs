@@ -65,6 +65,7 @@ builtinIdens = Set.fromList
    , Command "quotient"
    , Command "rationals"
    , Command "reals"
+   , Command "reduc"
    , Command "unit"
    ]
 
@@ -121,6 +122,7 @@ binOp tok = [Nothing, Just tok, Nothing]
 builtinAttrLs :: Set Pattern
 builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
    [ "associative"
+   , "confluent"
    , "even"
    , "injective"
    , "monotone"
@@ -128,7 +130,9 @@ builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
    , "odd"
    , "reflexive"
    , "surjective"
+   , "terminating"
    , "transitive"
+   , "well founded"
    ])
 
 builtinAttrRs :: Set Pattern
@@ -144,6 +148,7 @@ builtinVerbs = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "converge[s/]"
    , "divide[s/] ?"
    , "equal[s/] ?"
+   , "reduce[s/] to ?"
    , "agree[s/] with ? on ?"
    ])
 
@@ -162,6 +167,7 @@ builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    , "monoid[/s]"
    , "natural number[/s]"
    , "rational number[/s]"
+   , "rewriting system[/s]"
    , "ring[/s]"
    , "semigroup[/s]"
    , "set[/s]"
@@ -171,6 +177,7 @@ builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    , "fixed point[/s] of ?"
    , "ideal[/s] of ?"
    , "linear form[/s] on ?"
+   , "relation[/s] on ?"
    , "seminorm[/s] on ?"
    , "subspace[/s] of ?"
    , "vector space[/s] over ?"
@@ -182,6 +189,8 @@ builtinFuns :: Set (SgPl Pattern)
 builtinFuns = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "derivative[/s] of ?"
    , "successor[/s] of ?"
+   , "transitive closure[/s] of ?"
+   , "reflexive transitive closure[/s] of ?"
    , "infim[um/a] of ?"
    , "set[/s] of fixed points of ?"
    ])

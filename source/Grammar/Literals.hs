@@ -49,7 +49,9 @@ module Grammar.Literals
    , _let
    , _no
    , _not
+   , _on
    , _or
+   , _relation
    , _satisfying
    , _show
    , _since
@@ -104,7 +106,9 @@ _itIsWrong = w "it" *> w "is" *> (w "not" *> w "the" *> w "case" <|> w "wrong") 
 _let = w "let"
 _no = w "no"
 _not = w "not"
+_on = w "on"
 _or = w "or"
+_relation = w "relation"
 _satisfying = _suchThat <|> w "satisfying"
 _show = optional (w "first" <|> w "finally" <|> w "next" <|> w "now") *> w "we" *> w "show" <* optional (w "that")
 _since = w "since" <|> w "because"

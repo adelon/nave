@@ -1,0 +1,29 @@
+\begin{theory}
+   A rewriting system is a set $A$
+   together with a relation $\reduc$ on $A$.
+\end{theory}
+
+
+\begin{definition}
+   Let $R$ be a rewriting system.
+   We say that $a$ reduces to $b$ if $\reduc(a, b)$.
+\end{definition}
+
+
+\begin{definition}
+   Let $R$ be a rewriting system.
+   Let $t$ be the reflexive transitive closure of $\reduc$.
+   We say that $R$ is confluent if
+   for all $a, b, c$ if $\reduc(a, b)$ and $\reduc(a, b)$,
+   then there exists $d$ such that
+   $t(b, d)$ and $t(c, d)$.
+\end{definition}
+
+
+% Transitive closure is available as 'tc' from the Lean StdLib.
+% Well-founded is available as 'well_founded'.
+\begin{definition}
+   Let $R$ be a rewriting system.
+   Let $t$ be the transitive closure of $\reduc$.
+   We say that $R$ is terminating if $t$ is well founded.
+\end{definition}
