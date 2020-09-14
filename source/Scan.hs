@@ -120,10 +120,11 @@ guessNominalPlural pat = SgPl pat (pluralize pat)
          pat' -> pat'
 
 isAttrR :: Pattern -> Bool
-isAttrR = containsPreposition
+isAttrR pat = containsPreposition pat || containsSlot pat
    where
-      containsPreposition :: Pattern -> Bool
-      containsPreposition pat = any isPreposition (catMaybes pat)
+      containsPreposition, containsSlot :: Pattern -> Bool
+      containsPreposition = any isPreposition . catMaybes
+      containsSlot = any (== Nothing)
 
 isPreposition :: Tok -> Bool
 isPreposition w = Set.member w (Set.map Word prepositions)
