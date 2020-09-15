@@ -38,8 +38,8 @@ tokenize path raw = case runParser toks path raw of
 
 scan :: TokStream -> [ScanPattern]
 scan stream = case fullParses (parser scanner) (simpleStream stream) of
-   (_, _) -> []
-   _        -> impossible "scanner should have unambiguous grammar"
+   (pats: _, _)   -> pats
+   _           -> impossible "scanner should have unambiguous grammar"
 
 parse :: Lexicon -> TokStream -> Either ParseException [Para]
 parse lexicon stream = case fullParses (parser (grammar lexicon)) (simpleStream stream) of

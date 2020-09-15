@@ -188,8 +188,9 @@ grammar lexicon@Lexicon{..} = mdo
    proofStep    <- rule (proofAsm <|> proofSubGoal <|> proofFix <|> proofHave)
    proof        <- rule [Proof steps | steps <- many proofStep]
 
-   instrLet  <- rule [InstrAsm a | optional _throughout, a <- asm]
--- instrUse  <- rule [InstrUse i | optional _throughout, a <- use]
+   instrLet          <- rule [InstrAsm a | optional _throughout, a <- asm]
+-- instrLeanPrelude  <- rule [instrLeanPrelude lean | env_ "leanprelude"  ]
+-- instrUse          <- rule [InstrUse i | optional _throughout, a <- use]
 
    paraAxiom  <- rule [ParaAxiom tag p | ~(tag, p) <- env "axiom" axiom]
    paraThm    <- rule [ParaThm tag p | ~(tag, p) <- env "theorem" thm]
