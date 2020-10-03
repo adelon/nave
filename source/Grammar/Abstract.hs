@@ -193,7 +193,7 @@ data DefnError
    deriving (Show, Eq)
 
 data ProofStep
-   = ProofAsm Asm
+   = ProofAsm [Asm]
    | ProofFix (NonEmpty Var) Expr
    --
    -- 'since <stmt>, we have <stmt> by <ref>'

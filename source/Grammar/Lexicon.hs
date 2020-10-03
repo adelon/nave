@@ -165,6 +165,7 @@ builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    , "group[/s]"
    , "lattice[/s]"
    , "magma[/s]"
+   , "field[/s]"
    , "monoid[/s]"
    , "natural number[/s]"
    , "rational number[/s]"
@@ -190,6 +191,7 @@ builtinFuns :: Set (SgPl Pattern)
 builtinFuns = Set.map unsafeReadPatternSgPl (Set.fromList
    [ "derivative[/s] of ?"
    , "successor[/s] of ?"
+   , "tensor product[/s] of ? and ?"
    , "transitive closure[/s] of ?"
    , "reflexive transitive closure[/s] of ?"
    , "infim[um/a] of ?"

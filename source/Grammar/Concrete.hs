@@ -155,17 +155,19 @@ grammar lexicon@Lexicon{..} = mdo
    asmLetThe      <- rule [AsmLetThe x f | _let, x <- math var, _be, _the, f <- fun]
    asmLet         <- rule (asmLetNotion <|> asmLetNotions <|> asmLetIn <|> asmLetEq <|> asmLetThe)
    asmSuppose     <- rule [AsmSuppose s | _suppose, s <- stmt]
-   asm            <- rule ((asmLet <|> asmSuppose) <* _dot)
+   asm            <- rule (assumptionList (asmLet <|> asmSuppose) <* _dot)
+   asms           <- rule [concat as | as <- many asm]
+   --   asm            <- rule ((asmLet <|> asmSuppose) <* _dot)
 
-   axiom <- rule [Axiom as s | as <- many asm, optional _then, s <- stmt, _dot]
+   axiom <- rule [Axiom as s | as <- asms, optional _then, s <- stmt, _dot]
 
-   thm <- rule [Thm as s | as <- many asm, optional _then, s <- stmt, _dot]
+   thm <- rule [Thm as s | as <- asms, optional _then, s <- stmt, _dot]
 
    defnAttr   <- rule [DefnAttr mn t a | mn <- optional (_an *> notion), t <- term, _is, a <- attr]
    defnVerb   <- rule [DefnVerb mn t v | mn <- optional (_an *> notion), t <- term, v <- verb]
    defnNotion <- rule [DefnNotion mn t n | mn <- optional (_an *> notion), t <- term, _is, _an, n <- notion]
    defnHead   <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion))
-   defn       <- rule [Defn as head s | as <- many asm, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
+   defn       <- rule [Defn as head s | as <- asms, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
 
    -- In the future there needs to be dedicated functionality to handle isolated operators.
    -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
@@ -188,7 +190,7 @@ grammar lexicon@Lexicon{..} = mdo
    proofStep    <- rule (proofAsm <|> proofSubGoal <|> proofFix <|> proofHave)
    proof        <- rule [Proof steps | steps <- many proofStep]
 
-   instrLet          <- rule [InstrAsm a | optional _throughout, a <- asm]
+   instrLet          <- rule [InstrAsm a | optional _throughout, a <- asmLet <|> asmSuppose]
 -- instrLeanPrelude  <- rule [instrLeanPrelude lean | env_ "leanprelude"  ]
 -- instrUse          <- rule [InstrUse i | optional _throughout, a <- use]
 
@@ -320,6 +322,10 @@ commaSep item = [i:|is | i <- item, is <- many (_comma *> item)]
 signatureList :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
 signatureList item = [i:|is | i <- item, is <- many (_commaAnd *> item)]
    <|> [i:|[j] | i <- item, _and, j <- item]
+
+assumptionList :: Prod r String Tok a -> Prod r String Tok [a]
+assumptionList item = NonEmpty.toList <$> signatureList item
+
 
 maybeVarTok :: Tok -> Maybe Var
 maybeVarTok = \case
