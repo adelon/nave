@@ -50,9 +50,11 @@ module Grammar.Literals
    , _no
    , _not
    , _on
+   , _oneOf
    , _or
    , _relation
    , _satisfying
+   , _setOf
    , _show
    , _since
    , _suchThat
@@ -66,6 +68,7 @@ module Grammar.Literals
    , _colon
    , _comma
    , _commaAnd
+   , _commaOr
    , _defeq
    , _dot
    , _eq
@@ -107,17 +110,18 @@ _let = w "let"
 _no = w "no"
 _not = w "not"
 _on = w "on"
+_oneOf = w "one" *> w "of"
 _or = w "or"
 _relation = w "relation"
 _satisfying = _suchThat <|> w "satisfying"
+_setOf = w "set" *> w "of"
 _show = optional (w "first" <|> w "finally" <|> w "next" <|> w "now") *> w "we" *> w "show" <* optional (w "that")
 _since = w "since" <|> w "because"
 _suchThat = w "such" *> w "that"
 _suppose = w "suppose" <* optional (w "that")
 _the = w "the"
 _then = w "then"
-_throughout = w "throughout" <* optional (w "this" *> w "section") <* optional _comma
-   <|> (w "in" *> w "the" *> w "sequel")
+_throughout = w "throughout" <* optional (w "this" *> w "section") <* optional _comma <|> (w "in" *> w "the" *> w "sequel")
 _thus = w "thus"
 _write = (optional (w "we") *> w "say" <* optional (w "that")) <|> (optional (w "we") *> w "write")
 
@@ -125,6 +129,7 @@ _write = (optional (w "we") *> w "say" <* optional (w "that")) <|> (optional (w 
 _colon = token (Symbol ":") <?> (":" :: String)
 _comma = token (Symbol ",") <?> ("," :: String)
 _commaAnd = token (Symbol ",") <* optional (w "and") <?> ("," :: String)
+_commaOr = token (Symbol ",") <* optional (w "or") <?> ("," :: String)
 _defeq = token (Symbol ":=") <?> (":=" :: String) -- Should use `\coloneq` from unicode-math as display.
 _dot = token (Symbol ".") <?> ("." :: String)
 _eq = token (Symbol "=") <?> ("=" :: String)

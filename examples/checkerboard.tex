@@ -1,0 +1,160 @@
+% The mutilated checkerboard problem
+
+
+
+% Setting up the board:
+
+%\begin{signature}
+%   A rank is a notion.
+%   $1, 2, 3, 4, 5, 6, 7, 8$ are ranks.
+%\end{signature}
+%\begin{definition}
+%   Define $\Rank = \{1, 2, 3, 4, 5, 6, 7, 8\}$.
+%\end{definition}
+
+% Combine as finite inductive type:
+%
+% Induces the notions 'a rank / ranks' and 'the (set of) ranks'.
+%
+\begin{inductive}
+   A rank is one of
+   $\rankOne$, $\rankTwo$, $\rankThree$, $\rankFour$, $\rankFive$, $\rankSix$, $\rankSeven$, or $\rankEight$.
+\end{inductive}
+
+%Let $r, r_1, r_2$ denote ranks.
+
+
+% Analogous to 'rank':
+%
+\begin{inductive}
+   A file is one of
+   $\fileA$, $\fileB$, $\fileC$, $\fileD$, $\fileE$, $\fileF$, $\fileG$, or $\fileH$.
+\end{inductive}
+
+%Let $f, f_1, f_2$ denote files.
+
+
+
+%\begin{signature}
+%   A square is a notion.
+%\end{signature}
+%\begin{axiom}
+%   $(f,r)$ is a square.
+%\end{axiom}
+
+% TODO
+%\begin{definition}
+   %A square is a pair of a file and a rank.
+   %Squares are pairs of files and ranks.
+%\end{definition}
+
+\begin{definition}
+   The checkerboard is the set of all squares.
+\end{definition}
+
+%Let $s, s_1, s_2, s_3, s_4$ denote squares.
+
+
+
+% Set-theory prelims should be built-in?
+
+
+% Needs ForTheL-style notions with variables!
+\begin{definition}
+   The mutilated checkerboard is the set of all squares $s$
+   such that $s \neq (\fileA, rankOne), (\fileH, rankEight)$.
+\end{definition}
+
+
+
+
+% TODO or define the predicates inductively?
+
+\begin{signature}
+   $r_1$ can be vertically adjacent to $r_2$.
+\end{signature}
+
+\begin{axion}
+   If $r_1$ is vertically adjacent to $r_2$ then $r_2$ is vertically adjacent to $r_1$.
+\end{axiom}
+
+
+% This is using the Naproche convention of only pairing up items in sequence.
+% To pair up all items (which we do not want to do) one would need to use the word 'pairwise'.
+\begin{axiom}
+   $\rankOne, rankTwo, \rankThree, \rankFour, \rankFive, \rankSix, \rankSeven, \rankEight$
+   are vertically adjacent to each other.
+\end{axiom}
+
+
+\begin{signature}
+   $f_1$ can be horizontally adjacent to $f_2$.
+\end{signature}
+
+\begin{axion}
+   If $f_1$ is horizontally adjacent to $f_2$ then $f_2$ is horizontally adjacent to $f_1$.
+\end{axiom}
+
+
+\begin{axiom}
+   $\fileA, \fileB, \fileC, \fileD, \fileE, \fileF, \fileG, \fileH$
+   are horizontally adjacent to each other.
+\end{axiom}
+
+
+\begin{definition}
+   A square $s_1$ is adjacent to $s_2$ iff
+   there exist $f_1, r_1, f_2, r_2$ such that
+   $s_1 = (f_1, r_1)$, $s_2 = (f_2, r_2)$ and on of the following holds:
+   $f_1 = f_2$ and $r_1$ is vertically adjacent to $r_2$;
+   or $r_1 = r_2$ and $f_1$ is vertically adjacent to $f_2$.
+\end{definition}
+
+
+
+\begin{definition}
+   A domino is a set $D$
+   such that $D = \{ s_1, s_2 \}$
+   for some adjacent squares $s_1, s_2$.
+\end{definition}
+
+
+\begin{definition}
+   A tiling is a pairwise disjoint set of dominos.
+\end{definition}
+
+\begin{definition}
+   Let $A$ be a subset of the checkerboard.
+   A tiling of $A$ is a tiling $T$
+   such that every square $s$
+   is an element of $A$ iff
+   $s$ is an element of some element of $T$.
+\end{definition}
+
+
+\begin{signature}
+   A square can be black.
+   A square can be white.
+\end{signature}
+
+% Using '_ xor _' instead of '_ iff not _'
+\begin{axiom}
+   %A square $s$ is black iff $s$ is not white.
+   A square $s$ is either black or white.
+\end{axiom}
+
+\begin{axiom}
+   If $s_1$ is adjacent to $s_2$
+   then $s_1$ is black iff $s_2$ is white.
+\end{axiom}
+
+\begin{axiom}
+   $(\fileA, rankOne)$ is black.
+   $(\fileH, rankEight)$ is black.
+\end{axiom}
+
+
+\begin{signature}
+   Let $s$ be a square.
+   Then $\swap(s)$ is a square.
+\end{signature}

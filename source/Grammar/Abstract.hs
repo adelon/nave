@@ -55,13 +55,40 @@ type Pattern = Holey Tok
 
 
 
-data BaseNotion
-   = BaseNotion (SgPl Pattern) [Term]
+type BaseNotion = BaseNotionOf Term
+data BaseNotionOf a
+   = BaseNotion (SgPl Pattern) [a]
    deriving (Show, Eq, Ord)
 
-data Notion
-   = Notion [AttrL] BaseNotion (Maybe AttrR)
+
+type Notion = NotionOf Term
+data NotionOf a
+   = Notion [AttrL] (BaseNotionOf a) (Maybe AttrR)
    deriving (Show, Eq, Ord)
+
+
+
+
+-- Should supersede all old notions eventually:
+-- ForTheL style notions that can bring their own names with them.
+--
+type BaseNotion' = BaseNotionOf' Term
+data BaseNotionOf' a
+   = BaseNotion' (SgPl Pattern) [Var] [a]
+--               ^^^^^^^^^^^^^^ ^^^^^ ^^^
+--               Lexical item   Names Arguments
+--
+   deriving (Show, Eq, Ord)
+--
+-- For example 'an integer n' would essentially be
+-- `BaseNotion (unsafeReadPattern "integer[s]") [Var "n"] []`
+
+
+type Notion' = NotionOf' Term
+data NotionOf' a
+   = Notion' [AttrL] (BaseNotionOf' a) (Maybe AttrR)
+   deriving (Show, Eq, Ord)
+
 
 -- Left attributives (`AttrL`) modify notions from the left side,
 -- e.g. `even`, `continuous`, and `σ-finite`.
@@ -99,6 +126,7 @@ data Fun
 data Term
    = TermExpr Expr
    | TermFun Fun
+   | TermSetOf Notion
    deriving (Show, Eq, Ord)
 
 data Conj = If | And | Or | Iff deriving (Show, Eq, Ord)
@@ -154,19 +182,32 @@ data Thm = Thm [Asm] Stmt
 -- of only a variable. A pattern is simple if it is precisely a pattern of
 -- simple terms. Refer also to `isWfDefn` and to the following example.
 --
---   'A natural number   $n$        divides $m$   iff   ...'
+--   "A natural number   $n$        divides $m$   iff   ..."
 --    ^^^^^^^^^^^^^^^^   ^^^        ^^^^^^^^^^^         ^^^
 --    type annotation    term       verb                definiens
 --    (a notion)         (simple)   (simple pattern)    (a statement)
 --
+--
+--
+-- A `DefnFun` consists of the functional notion (which must start with "the")
+-- and an optional specification of a symbolic equivalent. The symbolic equivalent
+-- does not need to have the same variables as the full functional notion pattern.
+--
+--   "The tensor product of $U$ and $V$ over $K$, $U\tensor V$, is ..."
+--    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^     ^^^
+--    definiendum                                 symbolic eqv.    definiens
+--    (a functional notion)                       (an exression)   (a term)
+--
 data DefnHead
    = DefnAttr (Maybe Notion) Term Attr
    | DefnVerb (Maybe Notion) Term Verb
-   | DefnNotion (Maybe Notion) Term Notion
+   | DefnNotion (Maybe Notion) Term Notion -- TODO Remove.
+   | DefnBaseNotion BaseNotion Notion
    deriving (Show, Eq)
 
 data Defn
    = Defn [Asm] DefnHead Stmt
+   | DefnFun [Asm] Term (Maybe Term) Term
    deriving (Show, Eq)
 
 -- Well-formedness check for definitions.
@@ -214,6 +255,10 @@ data Theory = Theory
    } deriving (Show, Eq)
 
 
+data Inductive
+   = InductiveFin (NonEmpty Text)
+   deriving (Show, Eq)
+
 
 
 data Proof
@@ -229,6 +274,7 @@ data Para
    | ParaProof Tag Proof
    | ParaDefn Defn
    | ParaTheory Theory
+   | ParaInd Inductive
    | InstrAsm Asm
    | InstrUse -- Import/opening
    deriving (Show, Eq)

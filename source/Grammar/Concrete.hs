@@ -44,7 +44,7 @@ grammar lexicon@Lexicon{..} = mdo
    number   <- rule (terminal maybeNumberTok                <?> "number")
    relator  <- rule (satisfy (`Set.member` lexiconRelators) <?> "relator")
    var      <- rule (terminal maybeVarTok                   <?> "variable")
-   vars     <- rule (commaSep var)
+   vars     <- rule (commaList var)
    cmd      <- rule (terminal maybeCmdTok                   <?> "TEX command")
 
 
@@ -74,7 +74,7 @@ grammar lexicon@Lexicon{..} = mdo
    exprBase    <- rule (exprVar <|> exprConst <|> exprNumber <|> exprParen)
    exprApp     <- rule [ExprApp e1 e2 | e1 <- exprBase, e2 <- paren formula <|> group formula]
    expr        <- mixfixExpression ops (exprBase <|> exprApp) ExprOp
-   exprs       <- rule (commaSep expr)
+   exprs       <- rule (commaList expr)
 
    chainBase   <- rule [ChainBase es | es <- exprs]
    chainCons   <- rule [ChainCons es r c | es <- exprs, r <- relator, c <- chain]
@@ -114,7 +114,8 @@ grammar lexicon@Lexicon{..} = mdo
    termExpr    <- rule [TermExpr f | f <- math formula]
    termFun     <- rule [TermFun p | _the, p <- fun]
    termIsolOp  <- rule [TermExpr (ExprConst f) | f <- math isolOp]
-   term        <- rule (termExpr <|> termFun <|> termIsolOp)
+   termSetOf   <- rule [TermSetOf n | _the, _setOf, optional _all, n <- notions]
+   term        <- rule (termExpr <|> termFun <|> termIsolOp <|> termSetOf)
 
 -- Basic statements are statements without any conjunctions or quantifiers.
 --
@@ -163,11 +164,17 @@ grammar lexicon@Lexicon{..} = mdo
 
    thm <- rule [Thm as s | as <- asms, optional _then, s <- stmt, _dot]
 
-   defnAttr   <- rule [DefnAttr mn t a | mn <- optional (_an *> notion), t <- term, _is, a <- attr]
-   defnVerb   <- rule [DefnVerb mn t v | mn <- optional (_an *> notion), t <- term, v <- verb]
-   defnNotion <- rule [DefnNotion mn t n | mn <- optional (_an *> notion), t <- term, _is, _an, n <- notion]
-   defnHead   <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion))
-   defn       <- rule [Defn as head s | as <- asms, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
+   defnAttr       <- rule [DefnAttr mn t a | mn <- optional (_an *> notion), t <- term, _is, a <- attr]
+   defnVerb       <- rule [DefnVerb mn t v | mn <- optional (_an *> notion), t <- term, v <- verb]
+   defnNotion     <- rule [DefnNotion mn t n | mn <- optional (_an *> notion), t <- term, _is, _an, n <- notion]
+   defnBaseNotion <- rule [DefnBaseNotion n n' | _an, n <- notionBase, _is, _an, n' <- notion]
+   defnHead       <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion <|> defnBaseNotion))
+   defnIf         <- rule [Defn as head s | as <- asms, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
+
+   defnFunSymb <- rule [f | _comma, f <- termExpr, _comma]
+   defnFun     <- rule [DefnFun as f mf t | as <- asms, f <- termFun, mf <- optional defnFunSymb, _is, t <- term, _dot]
+
+   defn        <- rule (defnIf <|> defnFun)
 
    -- In the future there needs to be dedicated functionality to handle isolated operators.
    -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
@@ -178,6 +185,10 @@ grammar lexicon@Lexicon{..} = mdo
    theorySig    <- rule [NonEmpty.toList fs | _equipped, fs <- signatureList (theoryFun <|> theoryRel)]
    theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])
    theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, fs <- theorySig, as <- theoryAxioms]
+
+   inductiveFin <- rule [ InductiveFin cs | _an, notionBase, _is, _oneOf, cs <- orList2 (math cmd), _dot]
+   inductive    <- rule inductiveFin
+
 
 -- TODO Decide on reference format and implement this production rule.
 --
@@ -199,7 +210,8 @@ grammar lexicon@Lexicon{..} = mdo
    paraProof  <- rule [ParaProof tag p | ~(tag, p) <- env "proof" proof]
    paraDefn   <- rule [ParaDefn p | p <- env_ "definition" defn]
    paraTheory <- rule [ParaTheory p | p <- env_ "theory" theory]
-   para       <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraTheory <|> paraProof <|> instrLet)
+   paraInd    <- rule [ParaInd p | p <- env_ "inductive" inductive]
+   para       <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraTheory <|> paraInd <|> paraProof <|> instrLet)
 
 -- Starting category.
 --
@@ -208,15 +220,46 @@ grammar lexicon@Lexicon{..} = mdo
 
 
 
+-- A disjunctive list with at least two items:
+-- * 'a or b'
+-- * 'a, b, or c'
+-- * 'a, b, c, or d'
+--
+orList2 :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
+orList2 item = [i:|is | i <- item, is <- many (_commaOr *> item)]
+   <|> [i:|[j] | i <- item, _or, j <- item]
+
+
+-- Nonempty textual lists of the form "a, b, c, and d".
+-- The final comma is mandatory, 'and' is not.
+-- Also allows "a and b". Should therefore be avoided in contexts where
+-- a logical conjunction would also be possible.
+-- Currently also allows additionals 'and's after each comma...
+--
+signatureList :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
+signatureList item = [i:|is | i <- item, is <- many (_commaAnd *> item)]
+   <|> [i:|[j] | i <- item, _and, j <- item]
+
+commaList :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
+commaList item = [i:|is | i <- item, is <- many (_comma *> item)]
+
+
+assumptionList :: Prod r String Tok a -> Prod r String Tok [a]
+assumptionList item = NonEmpty.toList <$> signatureList item
+
+
+
+
+
 -- This function could be rewritten, so that it can be used directly in the grammar,
 -- instead of with specialized variants.
 --
 patternOf
-   :: (pat -> [Term] -> b)
+   :: (pat -> [a] -> b)
    -> Lexicon
    -> (Lexicon -> Set pat)
    -> (pat -> Pattern)
-   -> Prod r e Tok Term
+   -> Prod r e Tok a
    -> Prod r e Tok b
 patternOf constr lexicon selector proj arg =
    [constr pat args | ~(args, pat) <- asum (fmap make pats)]
@@ -237,7 +280,7 @@ attrROf lexicon arg = patternOf AttrR lexicon lexiconAttrRs id arg
 attrOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok Attr
 attrOf lexicon arg = patternOf Attr lexicon lexiconAttr id arg
 
-notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok Term -> Prod r e Tok BaseNotion
+notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok a -> Prod r e Tok (BaseNotionOf a)
 notionOf lexicon proj arg = patternOf BaseNotion lexicon lexiconNoms proj arg
 
 verbOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok Term -> Prod r e Tok Verb
@@ -309,22 +352,6 @@ group body = [b | token (Open Invis), b <- body, token (Close Invis)]
 
 word :: Text -> Prod r String Tok Tok
 word w = token (Word w) <?> Text.unpack w
-
-commaSep :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
-commaSep item = [i:|is | i <- item, is <- many (_comma *> item)]
-
--- Nonempty textual lists of the form "a, b, c, and d".
--- The final comma is mandatory, 'and' is not.
--- Also allows "a and b". Should therefore be avoided in contexts where
--- a logical conjunction would also be possible.
--- Currently also allows additionals 'and's after each comma...
---
-signatureList :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
-signatureList item = [i:|is | i <- item, is <- many (_commaAnd *> item)]
-   <|> [i:|[j] | i <- item, _and, j <- item]
-
-assumptionList :: Prod r String Tok a -> Prod r String Tok [a]
-assumptionList item = NonEmpty.toList <$> signatureList item
 
 
 maybeVarTok :: Tok -> Maybe Var

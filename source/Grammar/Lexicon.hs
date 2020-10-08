@@ -75,6 +75,8 @@ builtinOperators =
    -- Using the names from Lean for now (lub, glb, ...).
    [ [(binOp (Command "glb"), LeftAssoc)]
    , [(binOp (Command "lub"), LeftAssoc)]
+   , [(binOp (Command "directSum"), LeftAssoc)]
+   , [(binOp (Command "tensor"), LeftAssoc)]
    , [(binOp (Symbol "+"), LeftAssoc)]
    , [(binOp (Command "circ"), LeftAssoc)]
    , [(binOp (Command "mul"), LeftAssoc)]
@@ -159,21 +161,28 @@ builtinVerbs = Set.map unsafeReadPatternSgPl (Set.fromList
 --
 builtinNominals :: Set (SgPl Pattern)
 builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
+   -- Nullary
    [ "arithmetic[/s]"
    , "complete lattice[/s]"
+   , "domino[/s]"
+   , "field[/s]"
+   , "file[/s]"
    , "geometr[y/ies]"
    , "group[/s]"
    , "lattice[/s]"
    , "magma[/s]"
-   , "field[/s]"
    , "monoid[/s]"
    , "natural number[/s]"
+   , "rank[/s]"
    , "rational number[/s]"
    , "rewriting system[/s]"
    , "ring[/s]"
    , "semigroup[/s]"
    , "set[/s]"
+   , "square[/s]"
+   , "tiling[/s]"
    , "unital magma[/s]"
+   -- Unary
    , "divisor[/s] of ?"
    , "endomorphism[/s] of ?"
    , "fixed point[/s] of ?"
@@ -183,18 +192,26 @@ builtinNominals = Set.map unsafeReadPatternSgPl (Set.fromList
    , "seminorm[/s] on ?"
    , "subspace[/s] of ?"
    , "vector space[/s] over ?"
+   -- Binary
+   , "pair of ? and ?"
    , "magma homomorphism[/s] from ? to ?"
    ])
 
 
 builtinFuns :: Set (SgPl Pattern)
 builtinFuns = Set.map unsafeReadPatternSgPl (Set.fromList
-   [ "derivative[/s] of ?"
+   -- Nullary
+   [ "checkerboard[/s]"
+   , "mutilated checkerboard[/s]"
+   -- Unary
+   , "derivative[/s] of ?"
    , "successor[/s] of ?"
    , "tensor product[/s] of ? and ?"
    , "transitive closure[/s] of ?"
    , "reflexive transitive closure[/s] of ?"
    , "infim[um/a] of ?"
+   , "dual of ?"
+   , "space of bilinear forms on ?"
    , "set[/s] of fixed points of ?"
    ])
 
