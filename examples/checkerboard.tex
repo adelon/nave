@@ -1,20 +1,10 @@
 % The mutilated checkerboard problem
 
 
-
-% Setting up the board:
-
-%\begin{signature}
-%   A rank is a notion.
-%   $1, 2, 3, 4, 5, 6, 7, 8$ are ranks.
-%\end{signature}
-%\begin{definition}
-%   Define $\Rank = \{1, 2, 3, 4, 5, 6, 7, 8\}$.
-%\end{definition}
-
-% Combine as finite inductive type:
+% Combine as simple finite inductive type:
 %
 % Induces the notions 'a rank / ranks' and 'the (set of) ranks'.
+% Also induces appropriate axioms in the FOL interpretation.
 %
 \begin{inductive}
    A rank is one of
@@ -34,6 +24,9 @@
 %Let $f, f_1, f_2$ denote files.
 
 
+% TODO Unsure what would be a good formulation.
+% It would be nice to be able to define this directly and have
+% translator generate the appropriate axiom.
 
 %\begin{signature}
 %   A square is a notion.
@@ -42,7 +35,6 @@
 %   $(f,r)$ is a square.
 %\end{axiom}
 
-% TODO
 %\begin{definition}
    %A square is a pair of a file and a rank.
    %Squares are pairs of files and ranks.
@@ -55,8 +47,6 @@
 %Let $s, s_1, s_2, s_3, s_4$ denote squares.
 
 
-
-% Set-theory prelims should be built-in?
 
 
 % Needs ForTheL-style notions with variables!
@@ -139,7 +129,6 @@
 
 % Using '_ xor _' instead of '_ iff not _'
 \begin{axiom}
-   %A square $s$ is black iff $s$ is not white.
    A square $s$ is either black or white.
 \end{axiom}
 
