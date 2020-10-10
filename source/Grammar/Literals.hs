@@ -39,6 +39,7 @@ module Grammar.Literals
    , _denote
    , _equipped
    , _every
+   , _exist
    , _exists
    , _extends
    , _fix
@@ -102,6 +103,7 @@ _can = w "can"
 _denote = w "denote"
 _equipped = optional (w "equipped" <|> w "together") *>  "with"
 _every = optional (w "for") *> w "every"
+_exist = w "there" *> w "exist"
 _exists = w "there" *> w "exists"
 _extends = (_is *> _an) <|> (w "consists" *> w "of" *> _an)
 _fix = w "fix"

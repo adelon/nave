@@ -142,16 +142,18 @@ grammar lexicon@Lexicon{..} = mdo
    all       <- rule [All xs Nothing b s | _all <|> _every, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
    allNotion <- rule [All xs (Just n) b s | _every, n <- notion, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
 
-   some       <- rule [Some xs Nothing s | _exists, xs <- math vars, _suchThat, s <- stmt]
-   someNotion <- rule [SomeNotion nx s | _exists, _an, nx <- notion, _suchThat, s <- stmt]
+   some        <- rule [Some xs Nothing s | _exists <|> _exist, xs <- math vars, _suchThat, s <- stmt]
+   someNotion  <- rule [SomeNotion nx s | _exists, _an, nx <- notion, _suchThat, s <- stmt]
+   someNotions <- rule [SomeNotion nx s | _exist, _an, nx <- notions, _suchThat, s <- stmt]
 
    none        <- rule [None xs Nothing s | _exists, _no, xs <- math vars, _suchThat, s <- stmt]
    noneNotion  <- rule [None xs (Just n) s | _exists, _no, n <- notion, xs <- math vars, _suchThat, s <- stmt]
 
-   stmtQuant       <- rule (all <|> some <|> none)
-   stmtQuantNotion <- rule (allNotion <|> someNotion <|> noneNotion)
+   stmtQuant        <- rule (all <|> some <|> none)
+   stmtQuantNotion  <- rule (allNotion <|> someNotion <|> noneNotion)
+   stmtQuantNotions <- rule someNotions
 
-   stmt <- rule (stmtNeg <|> stmtIf <|> stmtQuant <|> stmtQuantNotion <|> stmtIff)
+   stmt <- rule (stmtNeg <|> stmtIf <|> stmtQuant <|> stmtQuantNotion <|> stmtQuantNotions <|> stmtIff)
 
    asmLetIn       <- rule [AsmLetIn xs e | _let, ~(xs, e) <- math typing]
    asmLetNotion   <- rule [AsmLetNom (pure x) n | _let, x <- math var, _be <|> _denote, _an, n <- notion]
