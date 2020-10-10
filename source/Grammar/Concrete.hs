@@ -97,19 +97,23 @@ grammar lexicon@Lexicon{..} = mdo
 -- 'unexpected <token>' error.
 --
    attrL       <- rule (attrLOf lexicon term)
-   attrSuch    <- rule [AttrSuch s | s <- suchStmt]
-   attrR       <- rule (attrROf lexicon term <|> attrSuch)
+   attrR       <- rule (attrROf lexicon term) -- Should only be used with notions!
    attr        <- rule (attrOf lexicon term)
    verb        <- rule (verbOf lexicon sg term)
    fun         <- rule (funOf lexicon sg term)
 
-   notionBase  <- rule (notionOf lexicon sg term)
-   notionsBase <- rule (notionOf lexicon pl term)
-   notion      <- rule [Notion as n ma | as <- many attrL, n <- notionBase, ma <- optional attrR]
-   notions     <- rule [Notion as n ma | as <- many attrL, n <- notionsBase, ma <- optional attrR]
+   -- A basic right attribute or a conjunction of them, followed by an optional that-does phrase.
+   attrRThat   <- rule [AttrRThat v | _that, v <- verb]
+   attrRThats  <- rule ([[a] | a <- attrRThat] <|> [[a,a'] | a <- attrRThat, _and, a' <- attrRThat] <|> pure [])
+   attrRs      <- rule ([[a] | a <- attrR] <|> [[a,a'] | a <- attrR, _and, a' <- attrR] <|> pure [])
+   attrRight   <- rule [as <> as' | as <- attrRs, as' <- attrRThats]
 
-   notionVarBase <- rule (namedNominalOf lexicon term (math var))
-   notionVar     <- rule [(Notion as n ma, x) | as <- many attrL, ~(n, x) <- notionVarBase, ma <- optional attrR]
+   notionName   <- rule (math (commaList_ var) <|> pure [])
+
+   notionBase   <- rule (notionOf lexicon sg term notionName)
+   notion       <- rule [Notion as n as' ms  | as <- many attrL, n <- notionBase, as' <- attrRight, ms <- optional suchStmt]
+   notionsBase  <- rule (notionOf lexicon pl term notionName)
+   notions      <- rule [Notion as n as' ms | as <- many attrL, n <- notionsBase, as' <- attrRight, ms <- optional suchStmt]
 
    termExpr    <- rule [TermExpr f | f <- math formula]
    termFun     <- rule [TermFun p | _the, p <- fun]
@@ -139,7 +143,7 @@ grammar lexicon@Lexicon{..} = mdo
    allNotion <- rule [All xs (Just n) b s | _every, n <- notion, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
 
    some       <- rule [Some xs Nothing s | _exists, xs <- math vars, _suchThat, s <- stmt]
-   someNotion <- rule [Some (pure x) (Just n) s | _exists, _an, ~(n, x) <- notionVar, _suchThat, s <- stmt]
+   someNotion <- rule [SomeNotion nx s | _exists, _an, nx <- notion, _suchThat, s <- stmt]
 
    none        <- rule [None xs Nothing s | _exists, _no, xs <- math vars, _suchThat, s <- stmt]
    noneNotion  <- rule [None xs (Just n) s | _exists, _no, n <- notion, xs <- math vars, _suchThat, s <- stmt]
@@ -167,8 +171,8 @@ grammar lexicon@Lexicon{..} = mdo
    defnAttr       <- rule [DefnAttr mn t a | mn <- optional (_an *> notion), t <- term, _is, a <- attr]
    defnVerb       <- rule [DefnVerb mn t v | mn <- optional (_an *> notion), t <- term, v <- verb]
    defnNotion     <- rule [DefnNotion mn t n | mn <- optional (_an *> notion), t <- term, _is, _an, n <- notion]
-   defnBaseNotion <- rule [DefnBaseNotion n n' | _an, n <- notionBase, _is, _an, n' <- notion]
-   defnHead       <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion <|> defnBaseNotion))
+   defnNotionBase <- rule [DefnNotionBase n n' | _an, n <- notionBase, _is, _an, n' <- notion]
+   defnHead       <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion <|> defnNotionBase))
    defnIf         <- rule [Defn as head s | as <- asms, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
 
    defnFunSymb <- rule [f | _comma, f <- termExpr, _comma]
@@ -189,6 +193,8 @@ grammar lexicon@Lexicon{..} = mdo
    inductiveFin <- rule [ InductiveFin cs | _an, notionBase, _is, _oneOf, cs <- orList2 (math cmd), _dot]
    inductive    <- rule inductiveFin
 
+   signatureAttr  <- rule [SignatureAttr x a | x <- math var, _can, _be, a <- attrOf lexicon (math var)]
+   signature      <- rule (signatureAttr <* _dot)
 
 -- TODO Decide on reference format and implement this production rule.
 --
@@ -211,7 +217,8 @@ grammar lexicon@Lexicon{..} = mdo
    paraDefn   <- rule [ParaDefn p | p <- env_ "definition" defn]
    paraTheory <- rule [ParaTheory p | p <- env_ "theory" theory]
    paraInd    <- rule [ParaInd p | p <- env_ "inductive" inductive]
-   para       <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraTheory <|> paraInd <|> paraProof <|> instrLet)
+   paraSig    <- rule [ParaSig p | p <- env_ "signature" signature]
+   para       <- rule (paraAxiom <|> paraThm <|> paraDefn <|> paraTheory <|> paraInd <|> paraSig <|> paraProof <|> instrLet)
 
 -- Starting category.
 --
@@ -243,6 +250,9 @@ signatureList item = [i:|is | i <- item, is <- many (_commaAnd *> item)]
 commaList :: Prod r String Tok a -> Prod r String Tok (NonEmpty a)
 commaList item = [i:|is | i <- item, is <- many (_comma *> item)]
 
+commaList_ :: Prod r String Tok a -> Prod r String Tok [a]
+commaList_ item = NonEmpty.toList <$> commaList item
+
 
 assumptionList :: Prod r String Tok a -> Prod r String Tok [a]
 assumptionList item = NonEmpty.toList <$> signatureList item
@@ -271,17 +281,14 @@ patternOf constr lexicon selector proj arg =
          Nothing : ws -> [a:as | a <- arg, as <- go ws]
          []           -> pure []
 
-attrLOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok AttrL
+attrLOf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AttrLOf arg)
 attrLOf lexicon arg = patternOf AttrL lexicon lexiconAttrLs id arg
 
-attrROf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok AttrR
+attrROf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AttrROf arg)
 attrROf lexicon arg = patternOf AttrR lexicon lexiconAttrRs id arg
 
-attrOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok Attr
+attrOf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AttrOf arg)
 attrOf lexicon arg = patternOf Attr lexicon lexiconAttr id arg
-
-notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok a -> Prod r e Tok (BaseNotionOf a)
-notionOf lexicon proj arg = patternOf BaseNotion lexicon lexiconNoms proj arg
 
 verbOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok Term -> Prod r e Tok Verb
 verbOf lexicon proj arg = patternOf Verb lexicon lexiconVerbs proj arg
@@ -291,17 +298,17 @@ funOf lexicon proj arg = patternOf Fun lexicon lexiconFuns proj arg
 
 
 -- A notion pattern with a variable as name. Uses `arg` for
--- the slots, and `var` for the name. The notion patterns are
+-- the slots, and `var` for the name(s). The notion patterns are
 -- obtained from `lexicon`.
 --
-namedNominalOf :: Lexicon -> Prod r e Tok Term -> Prod r e Tok var -> Prod r e Tok (BaseNotion, var)
-namedNominalOf lexicon arg var =
-   [(BaseNotion pat (args1 <> args2), x) | ~(args1, x, args2, pat) <- asum (fmap make pats)]
+notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok arg -> Prod r e Tok [Var] -> Prod r e Tok (NotionBaseOf arg)
+notionOf lexicon proj arg vars =
+   [NotionBase pat xs (args1 <> args2) | ~(args1, xs, args2, pat) <- asum (fmap make pats)]
    where
       pats = Set.toList (lexiconNoms lexicon)
       make pat =
-         let (pat1, pat2) = splitOnPreposition (sg pat)
-         in  [(args1, x, args2, pat) | args1 <- go pat1, x <- var, args2 <- go pat2]
+         let (pat1, pat2) = splitOnPreposition (proj pat)
+         in  [(args1, xs, args2, pat) | args1 <- go pat1, xs <- vars, args2 <- go pat2]
       go = \case
          Just w : ws  -> [as | token w, as <- go ws]
          Nothing : ws -> [a:as | a <- arg, as <- go ws]
@@ -310,8 +317,6 @@ namedNominalOf lexicon arg var =
 
 
 
-command :: Text -> Prod r e Tok Tok
-command cmd = token (Command cmd)
 
 begin, end :: Text -> Prod r e Tok Tok
 begin kind = token (BeginEnv kind)
@@ -327,7 +332,7 @@ env kind body = [(t, b) | begin kind, t <- optional tag, optional label, b <- bo
       tag :: Prod r e Tok [Tok]
       tag = bracket (many (satisfy (/= Close Bracket)))
 
--- `env_` is like `env`, but without allowing labels.
+-- `env_` is like `env`, but without allowing tags.
 --
 env_ :: Text -> Prod r e Tok a -> Prod r e Tok a
 env_ kind body = [b | begin kind, optional label, b <- body, end kind]
@@ -352,6 +357,9 @@ group body = [b | token (Open Invis), b <- body, token (Close Invis)]
 
 word :: Text -> Prod r String Tok Tok
 word w = token (Word w) <?> Text.unpack w
+
+command :: Text -> Prod r e Tok Tok
+command cmd = token (Command cmd)
 
 
 maybeVarTok :: Tok -> Maybe Var

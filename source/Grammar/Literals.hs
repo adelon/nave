@@ -35,6 +35,7 @@ module Grammar.Literals
    , _and
    , _are
    , _be
+   , _can
    , _equipped
    , _every
    , _exists
@@ -59,6 +60,7 @@ module Grammar.Literals
    , _since
    , _suchThat
    , _suppose
+   , _that
    , _the
    , _then
    , _throughout
@@ -95,6 +97,7 @@ _an = w "a" <|> w "an"
 _and = w "and"
 _are = w "are"
 _be = w "be"
+_can = w "can"
 _equipped = optional (w "equipped" <|> w "together") *>  "with"
 _every = optional (w "for") *> w "every"
 _exists = w "there" *> w "exists"
@@ -119,6 +122,7 @@ _show = optional (w "first" <|> w "finally" <|> w "next" <|> w "now") *> w "we" 
 _since = w "since" <|> w "because"
 _suchThat = w "such" *> w "that"
 _suppose = w "suppose" <* optional (w "that")
+_that = w "that"
 _the = w "the"
 _then = w "then"
 _throughout = w "throughout" <* optional (w "this" *> w "section") <* optional _comma <|> (w "in" *> w "the" *> w "sequel")

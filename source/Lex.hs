@@ -144,9 +144,18 @@ number = lexeme do
    let t = Number (Text.pack n)
    pure t
 
+
 var :: Lexer (Located Tok)
-var = lexeme (fmap Variable (letter <|> bb <|> greek))
+var = lexeme (fmap Variable var')
    where
+   var' = (letter <|> bb <|> greek) <> (subscriptNumber <|> pure "")
+
+   subscriptNumber :: Lexer Text
+   subscriptNumber = do
+      Char.char '_'
+      n <- some Char.digitChar
+      pure (Text.pack n)
+
    letter :: Lexer Text
    letter = fmap Text.singleton Char.letterChar
 

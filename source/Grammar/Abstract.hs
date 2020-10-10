@@ -50,33 +50,19 @@ type Formula = Expr
 type Connective = Holey Tok
 
 
-
+-- Patterns should be nonempty lists with at least one proper word token.
+-- Hyphens and quotes in words are treated as letters.
+-- Thus 'manifold-with-boundary' is a singleton pattern.
+--
 type Pattern = Holey Tok
 
 
 
-type BaseNotion = BaseNotionOf Term
-data BaseNotionOf a
-   = BaseNotion (SgPl Pattern) [a]
-   deriving (Show, Eq, Ord)
-
-
-type Notion = NotionOf Term
-data NotionOf a
-   = Notion [AttrL] (BaseNotionOf a) (Maybe AttrR)
-   deriving (Show, Eq, Ord)
-
-
-
-
--- Should supersede all old notions eventually:
--- ForTheL style notions that can bring their own names with them.
---
-type BaseNotion' = BaseNotionOf' Term
-data BaseNotionOf' a
-   = BaseNotion' (SgPl Pattern) [Var] [a]
---               ^^^^^^^^^^^^^^ ^^^^^ ^^^
---               Lexical item   Names Arguments
+type NotionBase = NotionBaseOf Term
+data NotionBaseOf a
+   = NotionBase (SgPl Pattern) [Var] [a]
+--              ^^^^^^^^^^^^^^ ^^^^^ ^^^
+--              Lexical item   Names Arguments
 --
    deriving (Show, Eq, Ord)
 --
@@ -84,41 +70,49 @@ data BaseNotionOf' a
 -- `BaseNotion (unsafeReadPattern "integer[s]") [Var "n"] []`
 
 
-type Notion' = NotionOf' Term
-data NotionOf' a
-   = Notion' [AttrL] (BaseNotionOf' a) (Maybe AttrR)
+type Notion = NotionOf Term
+data NotionOf a
+   = Notion [AttrLOf a] (NotionBaseOf a) [AttrROf a] (Maybe Stmt)
    deriving (Show, Eq, Ord)
+
 
 
 -- Left attributives (`AttrL`) modify notions from the left side,
 -- e.g. `even`, `continuous`, and `σ-finite`.
 --
-data AttrL
-   = AttrL Pattern [Term]
+type AttrL = AttrLOf Term
+data AttrLOf a
+   = AttrL Pattern [a]
    deriving (Show, Eq, Ord)
 
 -- Right attributes consist of basic right attributes, e.g.
--- `divisible by ?`, or `of finite type`, and
--- such-that conditions.
+-- `divisible by ?`, or `of finite type` and verb phrases
+-- marked with 'that', such 'integer that divides n'.
+-- In some cases these right attributes may be followed
+-- by an additional such-that phrase.
 --
-data AttrR
-   = AttrR Pattern [Term]
-   | AttrSuch Stmt
+type AttrR = AttrROf Term
+data AttrROf a
+   = AttrR Pattern [a]
+   | AttrRThat Verb
    deriving (Show, Eq, Ord)
 
 -- For parts of the AST where attributes are not used to modify notions and
 -- the L/R distinction does not matter.
 -- For example, when then are used together with a copula, e.g. `n is even`
-data Attr
-   = Attr Pattern [Term]
+type Attr = AttrOf Term
+data AttrOf a
+   = Attr Pattern [a]
    deriving (Show, Eq, Ord)
 
-data Verb
-   = Verb (SgPl Pattern) [Term]
+type Verb = VerbOf Term
+data VerbOf a
+   = Verb (SgPl Pattern) [a]
    deriving (Show, Eq, Ord)
 
-data Fun
-   = Fun (SgPl Pattern) [Term]
+type Fun = FunOf Term
+data FunOf a
+   = Fun (SgPl Pattern) [a]
    deriving (Show, Eq, Ord)
 
 
@@ -151,6 +145,7 @@ data Stmt
    | All  (NonEmpty Var) (Maybe Notion) (Maybe Stmt) Stmt
    | Most (NonEmpty Var) (Maybe Notion) (Maybe Stmt) Stmt
    | Some (NonEmpty Var) (Maybe Notion) Stmt
+   | SomeNotion Notion Stmt
    | None (NonEmpty Var) (Maybe Notion) Stmt
    | Uniq (NonEmpty Var) (Maybe Notion) Stmt
 --
@@ -181,6 +176,7 @@ data Thm = Thm [Asm] Stmt
 -- separate wf-check. A `Term` is simple if it is an expression that consists
 -- of only a variable. A pattern is simple if it is precisely a pattern of
 -- simple terms. Refer also to `isWfDefn` and to the following example.
+-- This should eventually be superseded by a stricter grammar.
 --
 --   "A natural number   $n$        divides $m$   iff   ..."
 --    ^^^^^^^^^^^^^^^^   ^^^        ^^^^^^^^^^^         ^^^
@@ -202,7 +198,7 @@ data DefnHead
    = DefnAttr (Maybe Notion) Term Attr
    | DefnVerb (Maybe Notion) Term Verb
    | DefnNotion (Maybe Notion) Term Notion -- TODO Remove.
-   | DefnBaseNotion BaseNotion Notion
+   | DefnNotionBase NotionBase Notion
    deriving (Show, Eq)
 
 data Defn
@@ -260,6 +256,10 @@ data Inductive
    deriving (Show, Eq)
 
 
+data Signature
+   = SignatureAttr Var (AttrOf Var)
+   deriving (Show, Eq)
+
 
 data Proof
    = Proof [ProofStep]
@@ -275,6 +275,7 @@ data Para
    | ParaDefn Defn
    | ParaTheory Theory
    | ParaInd Inductive
+   | ParaSig Signature
    | InstrAsm Asm
    | InstrUse -- Import/opening
    deriving (Show, Eq)

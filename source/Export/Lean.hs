@@ -81,7 +81,7 @@ getNameFromPredicateHead :: DefnHead -> State ExportState Text
 getNameFromPredicateHead = \case
   DefnAttr _ _ (Attr pat _) -> getNameFromPattern pat
   DefnVerb _ _ (Verb (SgPl pat1 _) _) -> getNameFromPattern pat1
-  DefnNotion _ _ (Notion _ (BaseNotion (SgPl pat1 _) _) _) -> getNameFromPattern pat1
+  DefnNotion _ _ (Notion _ (NotionBase (SgPl pat1 _) _ _) _ _) -> getNameFromPattern pat1
 
 data LeanType = LeanType Text [Lean]
   deriving (Eq, Show)
@@ -155,14 +155,14 @@ extractChain chain@(ChainCons _ r _) = spread <$> (go [] chain >>= conv)
   where
     go vars (ChainBase (e :| es)) = pure $ (e : es) : vars
     go vars (ChainCons (e :| es) r' c) = do
-      when (r /= r') $ warn $ 
+      when (r /= r') $ warn $
         "Conflicting relators in chain: " <> Text.pack (show r) <> " and " <> Text.pack (show r') <> ". Aborting."
       go ((e : es) : vars) c
 
     conv = mapM (mapM extractExpr)
 
     spread [] = error "can't happen"
-    spread es = 
+    spread es =
       let f = case r of
             Word w -> foldl' LPrefixApp (LSymbol w)
             Symbol w -> foldl1 (LInfixApp w)
@@ -175,15 +175,14 @@ extractTerm (TermExpr e) = extractExpr e
 extractTerm (TermFun _) = throw LFunNotImplemented
 
 extractNotion :: Notion -> State ExportState (LeanType, [Lean])
-extractNotion (Notion attrLs (BaseNotion (SgPl pat _) terms) mattrR) = do
+extractNotion (Notion attrLs (NotionBase (SgPl pat _) vars terms) attrRs such) = do
   name <- getNameFromPattern pat
   name_args <- mapM extractTerm terms
   let type_ = LeanType name name_args
-  let rs = maybeToList $ mattrR >>= \case
-        AttrR p ts -> Just (p, ts)
-        AttrSuch _ -> Nothing
-  st <- case mattrR of
-    Just (AttrSuch s) -> (:[]) <$> extractStmt s
+  let rs = attrRs >>= \case
+        AttrR p ts -> [(p, ts)]
+  st <- case such of
+    Just s -> (:[]) <$> extractStmt s
     _ -> pure []
   let ls = [(p, t) | (AttrL p t) <- attrLs]
   constraints <- for (ls ++ rs) $ \(p, ts) -> do
@@ -198,7 +197,7 @@ extractQuantStmt q vs mn mstmt stmt = do
   mayTypeCs <- mapM extractNotion mn
   claim <- extractStmt stmt
   let body = foldr (LConj If) claim asms
-  pure $ LQuant q vs (fst <$> mayTypeCs) 
+  pure $ LQuant q vs (fst <$> mayTypeCs)
     $ appendConstraints (concat $ maybeToList $ snd <$> mayTypeCs) body
 
 -- TODO: Handle attributes uniformely.
@@ -228,7 +227,7 @@ extractAsm = \case
     pure $ [LConstraint stmt]
   AsmLetNom vs n -> do
     (t, asm) <- extractNotion n
-    pure $ map (\v -> LTyped v t) (toList vs) 
+    pure $ map (\v -> LTyped v t) (toList vs)
       ++ map (\x -> LConstraint $ foldl' LPrefixApp x $ (fmap LVar . toList) vs) asm
   AsmLetIn _ _ -> throw LFunNotImplemented
   AsmLetThe _ _ -> throw LAsmLetInNotImplemented
@@ -245,7 +244,7 @@ varsInTerm :: Term -> [Var]
 varsInTerm (TermFun _) = throw LFunNotImplemented
 varsInTerm (TermExpr e') = varsInExpr e'
   where
-    varsInExpr = \case 
+    varsInExpr = \case
       (ExprVar v) -> [v]
       (ExprConst _) -> []
       (ExprNumber _) -> []
@@ -267,7 +266,7 @@ varsInDefnHead (DefnAttr mn t (Attr _ ts)) = do
 varsInDefnHead _ = throw $ LTODO "varsInDefnHead"
 
 -- | TODO: We currently don't use the edges of the graph.
-mkVars :: [(Var, (VarKind, Maybe LeanType))] 
+mkVars :: [(Var, (VarKind, Maybe LeanType))]
        -> State ExportState [(Var, (VarKind, Maybe LeanType))]
 mkVars ts = do
   let m = id
@@ -282,7 +281,7 @@ mkVars ts = do
 -- ========================================================================= --
 
 exportDocument :: [Para] -> State ExportState (Doc a)
-exportDocument decls = (vsep . List.intersperse "") <$> toList 
+exportDocument decls = (vsep . List.intersperse "") <$> toList
   <$> traverse exportDeclaration decls
 
 exportDeclaration :: Para -> State ExportState (Doc ann)
@@ -314,7 +313,7 @@ exportDefinition (Defn asms dhead stmt) = do
   let frees = Set.toList $ freeVariables $ stmt' : asmConstraints
   orderedVars <- mkVars (typedVars ++ asmTyped ++ map (,(Implicit, Nothing)) frees)
   let (headerVars, forallVars) = List.partition (\(_,(x,_)) -> x==Normal) orderedVars
-  pure $ vsep [hsep ["def", pretty name, exportLeanVars headerVars, ": Prop :="], 
+  pure $ vsep [hsep ["def", pretty name, exportLeanVars headerVars, ": Prop :="],
     indent 2 (exportLean (forall forallVars $ appendConstraints (asmConstraints ++ varAsms) stmt'))]
 
 -- | TODO: handle types.
@@ -337,7 +336,7 @@ exportAxThm long short nameMay asms stmt proof = do
   stmt' <- extractStmt stmt
   let frees = Set.toList $ freeVariables $ stmt' : asmConstraints
   orderedVars <- mkVars (asmTyped ++ map (,(Implicit, Nothing)) frees)
-  pure $ vsep $ [hsep [long, pretty name, exportLeanVars orderedVars], 
+  pure $ vsep $ [hsep [long, pretty name, exportLeanVars orderedVars],
     indent 2 (":" <+> exportLean (appendConstraints (asmConstraints) stmt'))]
     ++ ((indent 2) <$> maybeToList proof)
 
@@ -354,7 +353,7 @@ exportAssumption asm = do
   lasm <- extractAsm asm
   fmap vsep $ forM lasm $ \case
     LTyped (Var v) t -> pure $  "variable " <> pretty v <> " : " <> exportLeanType t
-    LConstraint l -> do 
+    LConstraint l -> do
       i <- newConstantId
       pure $ "constant c_" <> pretty (show i) <> " : " <> exportLean l
 
@@ -401,7 +400,7 @@ exportLean = go . pp
       (LInfixApp t l1 l2) -> go l1 <+> pretty t <+> go l2
       (LNumber t) -> pretty t
       (LSymbol t) -> pretty t
-      (LQuant q vs mt l) -> (exportQuant q) <> hsep (((pretty . unVar) <$> toList vs) 
+      (LQuant q vs mt l) -> (exportQuant q) <> hsep (((pretty . unVar) <$> toList vs)
         ++ (((":" <+>) . exportLeanType) <$> maybeToList mt)) <> "," <+> go l
       (LConj c l1 l2) -> go l1 <+> exportConj c <+> go l2
       (LNot l) -> "¬" <> go l
@@ -452,7 +451,7 @@ data LException
 instance Exception LException where
   displayException = \case
     LTODO s -> "TODO: " <> s
-    LAsmLetInNotImplemented -> 
+    LAsmLetInNotImplemented ->
         "The Lean backend does not support statements of the form $n\\in\\natural_number$\n"
       <> "since arbitrary set inclusions can not be represented well in type theory.\n"
       <> "Try using 'Let k be a natural number'-like syntax instead."

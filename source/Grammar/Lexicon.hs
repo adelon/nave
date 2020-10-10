@@ -67,6 +67,8 @@ builtinIdens = Set.fromList
    , Command "reals"
    , Command "reduc"
    , Command "unit"
+   , Command "rankOne", Command "rankTwo", Command "rankThree", Command "rankFour", Command "rankFive", Command "rankSix", Command "rankSeven", Command "rankEight"
+   , Command "fileA", Command "fileB", Command "fileC", Command "fileD", Command "fileE", Command "fileF", Command "fileG", Command "fileH"
    ]
 
 
@@ -143,6 +145,9 @@ builtinAttrRs = Set.map unsafeReadPattern (Set.fromList
    [ "of finite order"
    , "of finite type"
    , "pointwise bounded by ? on ?"
+   , "vertically adjacent to ?"
+   , "horizontally adjacent to ?"
+   , "adjacent to ?"
    ])
 
 
