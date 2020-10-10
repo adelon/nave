@@ -36,6 +36,7 @@ module Grammar.Literals
    , _are
    , _be
    , _can
+   , _denote
    , _equipped
    , _every
    , _exists
@@ -98,6 +99,7 @@ _and = w "and"
 _are = w "are"
 _be = w "be"
 _can = w "can"
+_denote = w "denote"
 _equipped = optional (w "equipped" <|> w "together") *>  "with"
 _every = optional (w "for") *> w "every"
 _exists = w "there" *> w "exists"

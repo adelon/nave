@@ -154,8 +154,8 @@ grammar lexicon@Lexicon{..} = mdo
    stmt <- rule (stmtNeg <|> stmtIf <|> stmtQuant <|> stmtQuantNotion <|> stmtIff)
 
    asmLetIn       <- rule [AsmLetIn xs e | _let, ~(xs, e) <- math typing]
-   asmLetNotion   <- rule [AsmLetNom (pure x) n | _let, x <- math var, _be, _an, n <- notion]
-   asmLetNotions  <- rule [AsmLetNom xs n | _let, xs <- math vars, _be, n <- notions]
+   asmLetNotion   <- rule [AsmLetNom (pure x) n | _let, x <- math var, _be <|> _denote, _an, n <- notion]
+   asmLetNotions  <- rule [AsmLetNom xs n | _let, xs <- math vars, _be <|> _denote, n <- notions]
    asmLetEq       <- rule [AsmLetEq x e | _let, ~(x, e) <- math assignment]
    asmLetThe      <- rule [AsmLetThe x f | _let, x <- math var, _be, _the, f <- fun]
    asmLet         <- rule (asmLetNotion <|> asmLetNotions <|> asmLetIn <|> asmLetEq <|> asmLetThe)
@@ -207,7 +207,7 @@ grammar lexicon@Lexicon{..} = mdo
    proofStep    <- rule (proofAsm <|> proofSubGoal <|> proofFix <|> proofHave)
    proof        <- rule [Proof steps | steps <- many proofStep]
 
-   instrLet          <- rule [InstrAsm a | optional _throughout, a <- asmLet <|> asmSuppose]
+   instrLet          <- rule [InstrAsm a | optional _throughout, a <- asmLet <|> asmSuppose, _dot]
 -- instrLeanPrelude  <- rule [instrLeanPrelude lean | env_ "leanprelude"  ]
 -- instrUse          <- rule [InstrUse i | optional _throughout, a <- use]
 
