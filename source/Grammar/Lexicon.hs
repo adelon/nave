@@ -16,11 +16,13 @@ module Grammar.Lexicon where
 
 import Base
 import Grammar.Abstract
+import Grammar.Pattern (unsafeReadPattern, unsafeReadPatternSgPl)
 
 import Text.Earley.Mixfix (Holey, Associativity(..))
 
-import qualified Data.Set as Set
 import qualified Data.List as List
+import qualified Data.Set as Set
+import qualified Data.Text as Text
 
 
 data Lexicon = Lexicon
@@ -221,22 +223,35 @@ builtinFuns = Set.map unsafeReadPatternSgPl (Set.fromList
    ])
 
 
--- Naïve splitting of patterns at the first preposition.
--- This is intended for naming notions with variables, as in
--- 'there exists a linear form $h$ on $E$', where the underlying
--- pattern is 'linear form on ?'. In this case we would get:
+-- Naïve splitting of patterns to insert a variable slot for notions, as in
+-- 'there exists a linear form $h$ on $E$', where the underlying pattern is
+-- 'linear form on ?'. In this case we would get:
 --
--- splitOnPreposition (sg (unsafeReadPatternSgPl "linear form[/s] on ?"))
+-- splitOnVariableSlot (sg (unsafeReadPatternSgPl "linear form[/s] on ?"))
 -- ==
 -- (unsafeReadPattern "linear form", unsafeReadPattern "on ?")
 --
-splitOnPreposition :: Pattern -> (Pattern, Pattern)
-splitOnPreposition = List.break isPreposition
+splitOnVariableSlot :: Pattern -> (Pattern, Pattern)
+splitOnVariableSlot pat = case prepositionIndices <> nonhyphenatedSlotIndices of
+   [] -> (pat, []) -- Place variable slot at the end.
+   is -> List.splitAt (minimum is) pat
    where
+      prepositionIndices, slotIndices, nonhyphenatedSlotIndices :: [Int] -- Ascending.
+      prepositionIndices = List.findIndices isPreposition pat
+      slotIndices = List.findIndices isNothing pat
+      nonhyphenatedSlotIndices = [i | i <- slotIndices, noHyphen (nth (i + 1) pat)]
+
       isPreposition :: Maybe Tok -> Bool
       isPreposition = \case
          Just (Word w) -> w `Set.member` prepositions
          _ -> False
+
+      noHyphen :: Maybe (Maybe Tok) -> Bool
+      noHyphen = \case
+         Just (Just (Word w)) -> Text.head w /= '-'
+         -- If we arrive here, either the pattern is over (`Nothing`) or the next
+         -- part of the pattern is not a word that starts with a hyphen.
+         _ -> True
 
 
 -- Preposition are a closed class, but this list is not yet exhaustive.

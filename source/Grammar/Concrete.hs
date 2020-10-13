@@ -21,7 +21,7 @@ module Grammar.Concrete where
 import Base
 import Grammar.Abstract
 import Grammar.Literals
-import Grammar.Lexicon (Lexicon(..), lexiconAttr, splitOnPreposition)
+import Grammar.Lexicon (Lexicon(..), lexiconAttr, splitOnVariableSlot)
 
 import Text.Earley (Grammar, Prod, (<?>), rule, satisfy, terminal, token)
 import Text.Earley.Mixfix (mixfixExpression)
@@ -309,7 +309,7 @@ notionOf lexicon proj arg vars =
    where
       pats = Set.toList (lexiconNoms lexicon)
       make pat =
-         let (pat1, pat2) = splitOnPreposition (proj pat)
+         let (pat1, pat2) = splitOnVariableSlot (proj pat)
          in  [(args1, xs, args2, pat) | args1 <- go pat1, xs <- vars, args2 <- go pat2]
       go = \case
          Just w : ws  -> [as | token w, as <- go ws]

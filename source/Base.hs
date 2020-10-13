@@ -30,6 +30,14 @@ import qualified Control.Applicative as Applicative
 (??) :: Maybe a -> a -> a
 ma ?? a = fromMaybe a ma
 
+-- Safe list lookup. Replaces `(!!)`.
+nth :: Int -> [a] -> Maybe a
+nth _ [] = Nothing
+nth 0 (a : _) = Just a
+nth n (_ : as) = nth (n - 1) as
+
+
+
 -- Do nothing and return `()`.
 --
 pass :: Applicative f => f ()
