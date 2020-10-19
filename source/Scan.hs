@@ -142,14 +142,14 @@ extendLexicon (scan : scans) lexicon@Lexicon{..} | notFresh scan = extendLexicon
    where
       notFresh :: ScanPattern -> Bool
       notFresh = \case
-         ScanAttr pat -> Set.member pat lexiconAttrLs || Set.member pat lexiconAttrRs
+         ScanAttr pat -> Set.member pat lexiconAdjLs || Set.member pat lexiconAttrRs
          ScanNotion pat -> Set.member pat (Set.map sg lexiconNoms)
          ScanFun pat -> Set.member pat (Set.map sg lexiconFuns)
          ScanVerb pat -> Set.member pat (Set.map sg lexiconVerbs)
 --
 extendLexicon (scan : scans) lexicon@Lexicon{..} = case scan of
    ScanAttr pat | isAttrR pat -> extendLexicon scans lexicon{lexiconAttrRs = Set.insert pat lexiconAttrRs}
-   ScanAttr pat -> extendLexicon scans lexicon{lexiconAttrLs = Set.insert pat lexiconAttrLs}
+   ScanAttr pat -> extendLexicon scans lexicon{lexiconAdjLs = Set.insert pat lexiconAdjLs}
    --
    -- TODO adding patterns with grammatical number (SgPL).
    --

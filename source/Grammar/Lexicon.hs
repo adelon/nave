@@ -32,7 +32,7 @@ data Lexicon = Lexicon
    , lexiconConnectives :: [[(Holey Tok, Associativity)]]
    , lexiconRelators    :: Set Relator
    , lexiconVerbs       :: Set (SgPl Pattern)
-   , lexiconAttrLs      :: Set Pattern
+   , lexiconAdjLs      :: Set Pattern
    , lexiconAttrRs      :: Set Pattern
    , lexiconNoms        :: Set (SgPl Pattern)
    , lexiconFuns        :: Set (SgPl Pattern)
@@ -41,7 +41,7 @@ data Lexicon = Lexicon
 -- Projection returning the union of both left and right attributes.
 --
 lexiconAttr :: Lexicon -> Set Pattern
-lexiconAttr lexicon = lexiconAttrLs lexicon <> lexiconAttrRs lexicon
+lexiconAttr lexicon = lexiconAdjLs lexicon <> lexiconAttrRs lexicon
 
 
 
@@ -52,7 +52,7 @@ builtins = Lexicon
    , lexiconIsolOps     = builtinIsolOperators
    , lexiconConnectives = builtinConnectives
    , lexiconRelators    = builtinRelators
-   , lexiconAttrLs      = builtinAttrLs
+   , lexiconAdjLs      = builtinAdjLs
    , lexiconAttrRs      = builtinAttrRs
    , lexiconVerbs       = builtinVerbs
    , lexiconNoms        = builtinNominals
@@ -125,8 +125,8 @@ binOp :: Tok -> Holey Tok
 binOp tok = [Nothing, Just tok, Nothing]
 
 
-builtinAttrLs :: Set Pattern
-builtinAttrLs = Set.map unsafeReadPattern (Set.fromList
+builtinAdjLs :: Set Pattern
+builtinAdjLs = Set.map unsafeReadPattern (Set.fromList
    [ "associative"
    , "confluent"
    , "even"

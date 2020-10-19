@@ -79,9 +79,9 @@ getNameFromPattern = go False "" . reverse
 -- | Get the name of the singular from a pattern.
 getNameFromPredicateHead :: DefnHead -> State ExportState Text
 getNameFromPredicateHead = \case
-  DefnAttr _ _ (Attr pat _) -> getNameFromPattern pat
+  DefnAdj _ _ (Adj pat _) -> getNameFromPattern pat
   DefnVerb _ _ (Verb (SgPl pat1 _) _) -> getNameFromPattern pat1
-  DefnNotion _ _ (Notion _ (NotionBase (SgPl pat1 _) _ _) _ _) -> getNameFromPattern pat1
+  DefnNotion _ _ (Notion _ (Noun (SgPl pat1 _) _ _) _ _) -> getNameFromPattern pat1
 
 data LeanType = LeanType Text [Lean]
   deriving (Eq, Show)
@@ -175,16 +175,16 @@ extractTerm (TermExpr e) = extractExpr e
 extractTerm (TermFun _) = throw LFunNotImplemented
 
 extractNotion :: Notion -> State ExportState (LeanType, [Lean])
-extractNotion (Notion attrLs (NotionBase (SgPl pat _) vars terms) attrRs such) = do
+extractNotion (Notion attrLs (Noun (SgPl pat _) vars terms) attrRs such) = do
   name <- getNameFromPattern pat
   name_args <- mapM extractTerm terms
   let type_ = LeanType name name_args
   let rs = attrRs >>= \case
-        AttrR p ts -> [(p, ts)]
+        AdjR p ts -> [(p, ts)]
   st <- case such of
     Just s -> (:[]) <$> extractStmt s
     _ -> pure []
-  let ls = [(p, t) | (AttrL p t) <- attrLs]
+  let ls = [(p, t) | (AdjL p t) <- attrLs]
   constraints <- for (ls ++ rs) $ \(p, ts) -> do
     name' <- getNameFromPattern p
     args <- mapM extractTerm ts
@@ -213,7 +213,7 @@ extractStmt (Some vs mn stmt) = extractQuantStmt QSome vs mn Nothing stmt
 extractStmt (None vs mn stmt) = extractQuantStmt QNone vs mn Nothing stmt
 extractStmt (Uniq vs mn stmt) = extractQuantStmt QUniq vs mn Nothing stmt
 extractStmt (StmtNeg s) = LNot <$> extractStmt s
-extractStmt (StmtAttr t (Attr p ts)) = do
+extractStmt (StmtAdj t (Adj p ts)) = do
   name <- getNameFromPattern p
   args <- mapM extractTerm ts
   t' <- extractTerm t
@@ -258,7 +258,7 @@ varsInTerm (TermExpr e') = varsInExpr e'
 
 -- | We can assume that the 'Term' will consist of only a variable.
 varsInDefnHead :: DefnHead -> State ExportState [(Var, Maybe (LeanType, [Lean]))]
-varsInDefnHead (DefnAttr mn t (Attr _ ts)) = do
+varsInDefnHead (DefnAdj mn t (Adj _ ts)) = do
   info <- mapM extractNotion mn
   let v = fromSimpleTerm t
   let vs = concatMap varsInTerm ts

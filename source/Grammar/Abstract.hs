@@ -53,9 +53,9 @@ type Connective = Holey Tok
 
 
 
-type NotionBase = NotionBaseOf Term
-data NotionBaseOf a
-   = NotionBase (SgPl Pattern) [Var] [a]
+type Noun = NounOf Term
+data NounOf a
+   = Noun (SgPl Pattern) [Var] [a]
 --              ^^^^^^^^^^^^^^ ^^^^^ ^^^
 --              Lexical item   Names Arguments
 --
@@ -67,17 +67,17 @@ data NotionBaseOf a
 
 type Notion = NotionOf Term
 data NotionOf a
-   = Notion [AttrLOf a] (NotionBaseOf a) [AttrROf a] (Maybe Stmt)
+   = Notion [AdjLOf a] (NounOf a) [AdjROf a] (Maybe Stmt)
    deriving (Show, Eq, Ord)
 
 
 
--- Left attributives (`AttrL`) modify notions from the left side,
+-- Left attributives (`AdjL`) modify notions from the left side,
 -- e.g. `even`, `continuous`, and `σ-finite`.
 --
-type AttrL = AttrLOf Term
-data AttrLOf a
-   = AttrL Pattern [a]
+type AdjL = AdjLOf Term
+data AdjLOf a
+   = AdjL Pattern [a]
    deriving (Show, Eq, Ord)
 
 -- Right attributes consist of basic right attributes, e.g.
@@ -86,18 +86,18 @@ data AttrLOf a
 -- In some cases these right attributes may be followed
 -- by an additional such-that phrase.
 --
-type AttrR = AttrROf Term
-data AttrROf a
-   = AttrR Pattern [a]
+type AdjR = AdjROf Term
+data AdjROf a
+   = AdjR Pattern [a]
    | AttrRThat Verb
    deriving (Show, Eq, Ord)
 
 -- For parts of the AST where attributes are not used to modify notions and
 -- the L/R distinction does not matter.
 -- For example, when then are used together with a copula, e.g. `n is even`
-type Attr = AttrOf Term
-data AttrOf a
-   = Attr Pattern [a]
+type Adj = AdjOf Term
+data AdjOf a
+   = Adj Pattern [a]
    deriving (Show, Eq, Ord)
 
 type Verb = VerbOf Term
@@ -110,6 +110,12 @@ data FunOf a
    = Fun (SgPl Pattern) [a]
    deriving (Show, Eq, Ord)
 
+type Predicate = PredicateOf Term
+data PredicateOf a
+   = PredicateNot Predicate
+   | PredicateVerb (VerbOf a)
+   | PredicateAdj (AdjOf a)
+   deriving (Show, Eq)
 
 
 data Term
@@ -123,7 +129,7 @@ data Conj = If | And | Or | Iff deriving (Show, Eq, Ord)
 data Stmt
    = StmtFormula Formula
    | StmtNeg Stmt
-   | StmtAttr Term Attr
+   | StmtAdj Term Adj
    | StmtVerb Term Verb
    | StmtNotion Term Notion
    | StmtExists Notion
@@ -190,10 +196,10 @@ data Thm = Thm [Asm] Stmt
 --    (a functional notion)                       (an exression)   (a term)
 --
 data DefnHead
-   = DefnAttr (Maybe Notion) Term Attr
+   = DefnAdj (Maybe Notion) Term Adj
    | DefnVerb (Maybe Notion) Term Verb
    | DefnNotion (Maybe Notion) Term Notion -- TODO Remove.
-   | DefnNotionBase NotionBase Notion
+   | DefnNoun Noun Notion
    deriving (Show, Eq)
 
 data Defn
@@ -252,7 +258,7 @@ data Inductive
 
 
 data Signature
-   = SignatureAttr Var (AttrOf Var)
+   = SignatureAdj Var (AdjOf Var)
    deriving (Show, Eq)
 
 

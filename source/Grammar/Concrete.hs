@@ -96,24 +96,29 @@ grammar lexicon@Lexicon{..} = mdo
 -- lets us give more specific error messages, since it is no longer a generic
 -- 'unexpected <token>' error.
 --
-   attrL       <- rule (attrLOf lexicon term)
-   attrR       <- rule (attrROf lexicon term) -- Should only be used with notions!
-   attr        <- rule (attrOf lexicon term)
+   adjL       <- rule (adjLOf lexicon term)
+   adjR       <- rule (adjROf lexicon term) -- Should only be used with notions!
+   adj        <- rule (adjOf lexicon term)
    verb        <- rule (verbOf lexicon sg term)
    fun         <- rule (funOf lexicon sg term)
 
    -- A basic right attribute or a conjunction of them, followed by an optional that-does phrase.
    attrRThat   <- rule [AttrRThat v | _that, v <- verb]
    attrRThats  <- rule ([[a] | a <- attrRThat] <|> [[a,a'] | a <- attrRThat, _and, a' <- attrRThat] <|> pure [])
-   attrRs      <- rule ([[a] | a <- attrR] <|> [[a,a'] | a <- attrR, _and, a' <- attrR] <|> pure [])
+   attrRs      <- rule ([[a] | a <- adjR] <|> [[a,a'] | a <- adjR, _and, a' <- adjR] <|> pure [])
    attrRight   <- rule [as <> as' | as <- attrRs, as' <- attrRThats]
+
+   predicateVerb <- rule [PredicateVerb p | p <- verb]
+   predicateAdj  <- rule [PredicateAdj p | _is, p <- adj]
+   predicate     <- rule (predicateVerb <|> predicateAdj)
+   thatPredicate <- rule (_that *> predicate)
 
    notionName   <- rule (math (commaList_ var) <|> pure [])
 
    notionBase   <- rule (notionOf lexicon sg term notionName)
-   notion       <- rule [Notion as n as' ms  | as <- many attrL, n <- notionBase, as' <- attrRight, ms <- optional suchStmt]
+   notion       <- rule [Notion as n as' ms  | as <- many adjL, n <- notionBase, as' <- attrRight, ms <- optional suchStmt]
    notionsBase  <- rule (notionOf lexicon pl term notionName)
-   notions      <- rule [Notion as n as' ms | as <- many attrL, n <- notionsBase, as' <- attrRight, ms <- optional suchStmt]
+   notions      <- rule [Notion as n as' ms | as <- many adjL, n <- notionsBase, as' <- attrRight, ms <- optional suchStmt]
 
    termExpr    <- rule [TermExpr f | f <- math formula]
    termFun     <- rule [TermFun p | _the, p <- fun]
@@ -123,8 +128,8 @@ grammar lexicon@Lexicon{..} = mdo
 
 -- Basic statements are statements without any conjunctions or quantifiers.
 --
-   stmtAttr    <- rule [StmtAttr t a | t <- term, _is, a <- attr]
-   stmtAttrNeg <- rule [StmtNeg (StmtAttr t a) | t <- term, _is, _not, a <- attr]
+   stmtAttr    <- rule [StmtAdj t a | t <- term, _is, a <- adj]
+   stmtAttrNeg <- rule [StmtNeg (StmtAdj t a) | t <- term, _is, _not, a <- adj]
    stmtVerb    <- rule [StmtVerb t x | t <- term, x <- verb]
    stmtNotion  <- rule [StmtNotion t n | t <- term, _is, _an, n <- notion]
    stmtExists  <- rule [StmtExists n | _exists, _an, n <- notion]
@@ -170,11 +175,11 @@ grammar lexicon@Lexicon{..} = mdo
 
    thm <- rule [Thm as s | as <- asms, optional _then, s <- stmt, _dot]
 
-   defnAttr       <- rule [DefnAttr mn t a | mn <- optional (_an *> notion), t <- term, _is, a <- attr]
+   defnAttr       <- rule [DefnAdj mn t a | mn <- optional (_an *> notion), t <- term, _is, a <- adj]
    defnVerb       <- rule [DefnVerb mn t v | mn <- optional (_an *> notion), t <- term, v <- verb]
    defnNotion     <- rule [DefnNotion mn t n | mn <- optional (_an *> notion), t <- term, _is, _an, n <- notion]
-   defnNotionBase <- rule [DefnNotionBase n n' | _an, n <- notionBase, _is, _an, n' <- notion]
-   defnHead       <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion <|> defnNotionBase))
+   defnNoun <- rule [DefnNoun n n' | _an, n <- notionBase, _is, _an, n' <- notion]
+   defnHead       <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion <|> defnNoun))
    defnIf         <- rule [Defn as head s | as <- asms, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
 
    defnFunSymb <- rule [f | _comma, f <- termExpr, _comma]
@@ -195,7 +200,7 @@ grammar lexicon@Lexicon{..} = mdo
    inductiveFin <- rule [ InductiveFin cs | _an, notionBase, _is, _oneOf, cs <- orList2 (math cmd), _dot]
    inductive    <- rule inductiveFin
 
-   signatureAttr  <- rule [SignatureAttr x a | x <- math var, _can, _be, a <- attrOf lexicon (math var)]
+   signatureAttr  <- rule [SignatureAdj x a | x <- math var, _can, _be, a <- adjOf lexicon (math var)]
    signature      <- rule (signatureAttr <* _dot)
 
 -- TODO Decide on reference format and implement this production rule.
@@ -283,14 +288,14 @@ patternOf constr lexicon selector proj arg =
          Nothing : ws -> [a:as | a <- arg, as <- go ws]
          []           -> pure []
 
-attrLOf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AttrLOf arg)
-attrLOf lexicon arg = patternOf AttrL lexicon lexiconAttrLs id arg
+adjLOf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AdjLOf arg)
+adjLOf lexicon arg = patternOf AdjL lexicon lexiconAdjLs id arg
 
-attrROf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AttrROf arg)
-attrROf lexicon arg = patternOf AttrR lexicon lexiconAttrRs id arg
+adjROf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AdjROf arg)
+adjROf lexicon arg = patternOf AdjR lexicon lexiconAttrRs id arg
 
-attrOf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AttrOf arg)
-attrOf lexicon arg = patternOf Attr lexicon lexiconAttr id arg
+adjOf :: Lexicon -> Prod r e Tok arg -> Prod r e Tok (AdjOf arg)
+adjOf lexicon arg = patternOf Adj lexicon lexiconAttr id arg
 
 verbOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok Term -> Prod r e Tok Verb
 verbOf lexicon proj arg = patternOf Verb lexicon lexiconVerbs proj arg
@@ -303,9 +308,9 @@ funOf lexicon proj arg = patternOf Fun lexicon lexiconFuns proj arg
 -- the slots, and `var` for the name(s). The notion patterns are
 -- obtained from `lexicon`.
 --
-notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok arg -> Prod r e Tok [Var] -> Prod r e Tok (NotionBaseOf arg)
+notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok arg -> Prod r e Tok [Var] -> Prod r e Tok (NounOf arg)
 notionOf lexicon proj arg vars =
-   [NotionBase pat xs (args1 <> args2) | ~(args1, xs, args2, pat) <- asum (fmap make pats)]
+   [Noun pat xs (args1 <> args2) | ~(args1, xs, args2, pat) <- asum (fmap make pats)]
    where
       pats = Set.toList (lexiconNoms lexicon)
       make pat =

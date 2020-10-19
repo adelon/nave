@@ -57,4 +57,9 @@ many1_ = Applicative.some
 -- Should be used for braches that are unreachable or impossible states.
 -- Allows searching for 'error' while ignoring impossible branches.
 impossible :: String -> a
-impossible = error
+impossible msg = error ("IMPOSSIBLE: " <> msg)
+
+
+
+todo :: String -> a
+todo msg = error ("TODO: " <> msg)
