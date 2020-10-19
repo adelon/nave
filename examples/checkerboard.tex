@@ -1,10 +1,10 @@
 % The mutilated checkerboard problem
 
 
-% Combine as simple finite inductive type:
+% Combine signature declarations in a simple finite inductive declaration:
 %
-% Induces the notions 'a rank / ranks' and 'the (set of) ranks'.
-% Also induces appropriate axioms in the FOL interpretation.
+% Should induce the notions 'a rank / ranks', the definite noun 'the (set of) ranks',
+% and the various rank constructors.
 %
 \begin{inductive}
    A rank is one of
@@ -36,8 +36,8 @@ Let $f, f_1, f_2$ denote files.
 %\end{axiom}
 
 %\begin{definition}
-   %A square is a pair of a file and a rank.
-   %Squares are pairs of files and ranks.
+%  A square is a pair of a file and a rank.
+%  Squares are pairs of files and ranks.
 %\end{definition}
 
 \begin{definition}
@@ -57,8 +57,9 @@ Let $s, s_1, s_2, s_3, s_4$ denote squares.
 
 
 
-% TODO or define the predicates inductively?
+% MAYBE Define the predicates inductively?
 
+% Using the phrasing 'can be' instead stating 'is an atom'.
 \begin{signature}
    $r_1$ can be vertically adjacent to $r_2$.
 \end{signature}
@@ -68,8 +69,8 @@ Let $s, s_1, s_2, s_3, s_4$ denote squares.
 \end{axiom}
 
 
-% TODO not yet implemented
-% This is using the Naproche convention of only pairing up items in sequence.
+% TODO (not yet implemented)
+% This is using the ForTheL convention of only pairing up items in sequence.
 % To pair up all items (which we do not want to do) one would need to use the word 'pairwise'.
 \begin{axiom}
    $\rankOne, \rankTwo, \rankThree, \rankFour, \rankFive, \rankSix, \rankSeven, \rankEight$
@@ -127,7 +128,7 @@ Let $s, s_1, s_2, s_3, s_4$ denote squares.
    A square can be white.
 \end{signature}
 
-% Using '_ xor _' instead of '_ iff not _'
+% Using 'either _ or _' instead of '_ iff not _'
 \begin{axiom}
    A square $s$ is either black or white.
 \end{axiom}
