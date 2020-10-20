@@ -6,7 +6,7 @@ module Export.Lean where
 
 import Base
 import qualified Export.ContextGraph as CG
-import Grammar.Abstract
+import Grammar.Desugared
 import Grammar.Lexicon
 
 import Control.Monad.State
@@ -81,7 +81,8 @@ getNameFromPredicateHead :: DefnHead -> State ExportState Text
 getNameFromPredicateHead = \case
   DefnAdj _ _ (Adj pat _) -> getNameFromPattern pat
   DefnVerb _ _ (Verb (SgPl pat1 _) _) -> getNameFromPattern pat1
-  DefnNotion _ _ (Notion _ (Noun (SgPl pat1 _) _ _) _ _) -> getNameFromPattern pat1
+
+
 
 data LeanType = LeanType Text [Lean]
   deriving (Eq, Show)
@@ -174,24 +175,15 @@ extractTerm :: Term -> State ExportState Lean
 extractTerm (TermExpr e) = extractExpr e
 extractTerm (TermFun _) = throw LFunNotImplemented
 
-extractNotion :: Notion -> State ExportState (LeanType, [Lean])
-extractNotion (Notion attrLs (Noun (SgPl pat _) vars terms) attrRs such) = do
+extractNotion :: NounPhrase -> State ExportState (LeanType, [Lean])
+extractNotion (NounPhrase (Noun (SgPl pat _) vars terms) such) = do
   name <- getNameFromPattern pat
   name_args <- mapM extractTerm terms
   let type_ = LeanType name name_args
-  let rs = attrRs >>= \case
-        AdjR p ts -> [(p, ts)]
-  st <- case such of
-    Just s -> (:[]) <$> extractStmt s
-    _ -> pure []
-  let ls = [(p, t) | (AdjL p t) <- attrLs]
-  constraints <- for (ls ++ rs) $ \(p, ts) -> do
-    name' <- getNameFromPattern p
-    args <- mapM extractTerm ts
-    pure $ foldl' LPrefixApp (LSymbol name') (args ++ name_args)
-  pure $ (type_, st ++ constraints)
+  st <- extractStmt `mapM` such
+  pure (type_, st)
 
-extractQuantStmt :: Quant -> NonEmpty Var -> Maybe Notion -> Maybe Stmt -> Stmt -> State ExportState Lean
+extractQuantStmt :: Quant -> NonEmpty Var -> Maybe NounPhrase -> Maybe Stmt -> Stmt -> State ExportState Lean
 extractQuantStmt q vs mn mstmt stmt = do
   asms <- mapM extractStmt $ maybeToList mstmt
   mayTypeCs <- mapM extractNotion mn
@@ -202,7 +194,7 @@ extractQuantStmt q vs mn mstmt stmt = do
 
 -- TODO: Handle attributes uniformely.
 extractStmt :: Stmt -> State ExportState Lean
-extractStmt (StmtFormula f) = extractExpr f
+extractStmt (StmtExpr f) = extractExpr f
 extractStmt (StmtConj c s1 s2) = do
   s1' <- extractStmt s1
   s2' <- extractStmt s2
@@ -213,7 +205,7 @@ extractStmt (Some vs mn stmt) = extractQuantStmt QSome vs mn Nothing stmt
 extractStmt (None vs mn stmt) = extractQuantStmt QNone vs mn Nothing stmt
 extractStmt (Uniq vs mn stmt) = extractQuantStmt QUniq vs mn Nothing stmt
 extractStmt (StmtNeg s) = LNot <$> extractStmt s
-extractStmt (StmtAdj t (Adj p ts)) = do
+extractStmt (StmtVerbPhrase t (VPAdj (Adj p ts))) = do
   name <- getNameFromPattern p
   args <- mapM extractTerm ts
   t' <- extractTerm t

@@ -57,7 +57,8 @@ work file = do
          case parseResult of
             Left _ -> pure ()
             Right ps -> do
-               l <- Nave.exportLean ps
+               let ps' = Nave.desugar <$> ps
+               l <- Nave.exportLean ps'
                case l of
                   Right lean -> Text.writeFile leanPath lean
                   Left e -> do

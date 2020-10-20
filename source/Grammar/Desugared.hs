@@ -4,111 +4,28 @@
 -- Data types for the abstract syntax tree and helper functions
 -- for constructing the lexicon.
 --
-module Grammar.Abstract (module Grammar.Abstract, module Lex, module Grammar.Pattern) where
+module Grammar.Desugared (module Grammar.Desugared, module Grammar.Abstract, module Lex, module Grammar.Pattern) where
 
 
 import Base
 import Lex (Tok(..), Delim(..))
 import Grammar.Pattern (Pattern, SgPl(..))
 
-import Text.Earley.Mixfix (Holey)
-import qualified Data.Text as Text
+
+import Grammar.Abstract (Var(..), Chain(..), Formula, Expr(..), Term(..))
+import Grammar.Abstract (AdjOf(..), Adj, VerbOf(..), Verb, NounOf(..), Noun, FunOf(..), Fun, Conj(..))
+import qualified Grammar.Abstract as A
 
 
 
-newtype Var = Var {unVar :: Text} deriving (Show, Eq, Ord)
-
-
-
-
--- In the concrete grammar there is a distinction between expressions
--- and formulae, to handle precedences correctly. In the abstract grammar
--- this distinction is not needed. Thus `Formula = Expr`.
-
-data Expr
-   = ExprVar Var
-   | ExprConst Tok
-   | ExprNumber Text
-   | ExprOp Operator [Expr]
-   | ExprParen Expr
-   | ExprApp Expr Expr
-   | ExprChain Chain
-   deriving (Show, Eq, Ord)
-
-type Operator = Holey Tok
-
-data Chain
-   = ChainBase (NonEmpty Expr)
-   | ChainCons (NonEmpty Expr) Relator Chain
-   deriving (Show, Eq, Ord)
-
-type Relator = Tok
-
-type Formula = Expr
-
-type Connective = Holey Tok
-
-
-
-
-
-
-type Noun = NounOf Term
-data NounOf a
-   = Noun (SgPl Pattern) [Var] [a]
---              ^^^^^^^^^^^^^^ ^^^^^ ^^^
---              Lexical item   Names Arguments
---
-   deriving (Show, Eq, Ord)
---
--- For example 'an integer n' would essentially be
--- `BaseNotion (unsafeReadPattern "integer[s]") [Var "n"] []`
 
 
 type NounPhrase = NounPhraseOf Term
 data NounPhraseOf a
-   = NounPhrase [AdjLOf a] (NounOf a) [AdjROf a] (Maybe Stmt)
+   = NounPhrase (NounOf a) [Stmt]
    deriving (Show, Eq, Ord)
 
 
-
--- Left attributives (`AdjL`) modify notions from the left side,
--- e.g. `even`, `continuous`, and `σ-finite`.
---
-type AdjL = AdjLOf Term
-data AdjLOf a
-   = AdjL Pattern [a]
-   deriving (Show, Eq, Ord)
-
--- Right adjecives consist of basic right attributes, e.g.
--- `divisible by ?`, or `of finite type` and verb phrases
--- marked with 'that', such 'integer that divides n'.
--- In some cases these right attributes may be followed
--- by an additional such-that phrase.
---
-type AdjR = AdjROf Term
-data AdjROf a
-   = AdjR Pattern [a]
-   | AttrRThat VerbPhrase
-   deriving (Show, Eq, Ord)
-
--- For parts of the AST where attributes are not used to modify notions and
--- the L/R distinction does not matter.
--- For example, when then are used together with a copula, e.g. `n is even`
-type Adj = AdjOf Term
-data AdjOf a
-   = Adj Pattern [a]
-   deriving (Show, Eq, Ord)
-
-type Verb = VerbOf Term
-data VerbOf a
-   = Verb (SgPl Pattern) [a]
-   deriving (Show, Eq, Ord)
-
-type Fun = FunOf Term
-data FunOf a
-   = Fun (SgPl Pattern) [a]
-   deriving (Show, Eq, Ord)
 
 
 type VerbPhrase = VerbPhraseOf Term
@@ -119,29 +36,14 @@ data VerbPhraseOf a
    deriving (Show, Eq, Ord)
 
 
-data Quant = QAll | QSome | QNone | QUniq deriving (Show, Eq, Ord)
-
-data QuantPhrase = QuantPhrase Quant NounPhrase deriving (Show, Eq, Ord)
-
-
-data Term
-   = TermExpr Expr
-   | TermFun Fun
-   | TermSetOf NounPhrase
-   deriving (Show, Eq, Ord)
-
-
-
-data Conj = If | And | Or | Iff deriving (Show, Eq, Ord)
 
 data Stmt
-   = StmtFormula Formula               -- 'we have <Formula>'
-   | StmtNeg Stmt                      -- it is not the case that <Stmt>'
+   = StmtExpr Expr
+   | StmtNeg Stmt
    | StmtVerbPhrase Term VerbPhrase
-   | StmtNoun Term NounPhrase          -- '<Term> is an <NP>'
-   | StmtExists NounPhrase             -- 'there exists <NP>'
+   | StmtNounPhrase Term NounPhrase
+   | StmtExists NounPhrase
    | StmtConj Conj Stmt Stmt
-   | StmtQuantPhrase QuantPhrase Stmt
 --
 -- A quantification binds a nonempty list of variables.
 --
@@ -154,7 +56,7 @@ data Stmt
    | All  (NonEmpty Var) (Maybe NounPhrase) (Maybe Stmt) Stmt
    | Most (NonEmpty Var) (Maybe NounPhrase) (Maybe Stmt) Stmt
    | Some (NonEmpty Var) (Maybe NounPhrase) Stmt
-   | SomeNoun NounPhrase Stmt
+   | SomeNounPhrase NounPhrase Stmt
    | None (NonEmpty Var) (Maybe NounPhrase) Stmt
    | Uniq (NonEmpty Var) (Maybe NounPhrase) Stmt
 --
@@ -166,7 +68,7 @@ data Stmt
 data Asm
    = AsmSuppose Stmt
    | AsmLetNom (NonEmpty Var) NounPhrase -- 'let k be an integer'
-   | AsmLetIn (NonEmpty Var) Formula -- 'let $k\in\integers$'
+   | AsmLetIn (NonEmpty Var) Expr -- 'let $k\in\integers$'
    | AsmLetThe Var Fun -- 'let $g$ be the derivative of $f$'
    | AsmLetEq Var Expr -- 'let $m = n + k$'
    deriving (Show, Eq)
@@ -178,7 +80,7 @@ data Thm = Thm [Asm] Stmt
    deriving (Show, Eq)
 
 -- The head of the definition describes the part before the `iff`,
--- i.e. the definiendum. The `Maybe Notion` corresponds to an optional
+-- i.e. the definiendum. The `Maybe NounPhrase` corresponds to an optional
 -- type annotation for the `Term` of the head. The last part of the head
 -- is the pattern being defined. The `Term` and the pattern being defined
 -- must be 'simple'. This is not enforced syntactically, but with a
@@ -206,7 +108,6 @@ data Thm = Thm [Asm] Stmt
 data DefnHead
    = DefnAdj (Maybe NounPhrase) Term Adj
    | DefnVerb (Maybe NounPhrase) Term Verb
-   | DefnNotion (Maybe NounPhrase) Term NounPhrase -- TODO Remove.
    | DefnNoun Noun NounPhrase
    deriving (Show, Eq)
 

@@ -20,7 +20,7 @@ module Grammar.Concrete where
 
 import Base
 import Grammar.Abstract
-import Grammar.Literals
+import Grammar.Keywords
 import Grammar.Lexicon (Lexicon(..), lexiconAttr, splitOnVariableSlot)
 
 import Text.Earley (Grammar, Prod, (<?>), rule, satisfy, terminal, token)
@@ -83,102 +83,97 @@ grammar lexicon@Lexicon{..} = mdo
    formulaBase <- rule [ExprChain c | c <- chain]
    formula     <- mixfixExpression conns formulaBase ExprOp
 
--- These are asymmetric formulae, in the sense that we only allow
+-- These are asymmetric formulas, in the sense that we only allow
 -- variables on one side. They express judgements.
 --
    assignment  <- rule [(x, e) | x <- var, _eq <|> _defeq, e <- formula]
    typing      <- rule [(xs, e) | xs <- vars, _in <|> _colon, e <- formula]
 
+   adjL  <- rule (adjLOf lexicon term)
+   adjR  <- rule (adjROf lexicon term)
+   adj   <- rule (adjOf lexicon term)
+   verb  <- rule (verbOf lexicon sg term)
+   noun  <- rule (nounOf lexicon sg term nounName)
+   nouns <- rule (nounOf lexicon pl term nounName)
+   fun   <- rule (funOf lexicon sg term)
 
--- Patterns always allow full terms as arguments. If stricter conditions are
--- to be placed on the arguments, then they have to verified with a
--- well-formedness check, not grammatically. This simplifies the grammar and
--- lets us give more specific error messages, since it is no longer a generic
--- 'unexpected <token>' error.
---
-   adjL       <- rule (adjLOf lexicon term)
-   adjR       <- rule (adjROf lexicon term) -- Should only be used with notions!
-   adj        <- rule (adjOf lexicon term)
-   verb        <- rule (verbOf lexicon sg term)
-   fun         <- rule (funOf lexicon sg term)
-
-   -- A basic right attribute or a conjunction of them, followed by an optional that-does phrase.
-   attrRThat   <- rule [AttrRThat v | _that, v <- verb]
+   --adjPhraseR  <- rule
+   attrRThat   <- rule [AttrRThat v | v <- thatVerbPhrase]
    attrRThats  <- rule ([[a] | a <- attrRThat] <|> [[a,a'] | a <- attrRThat, _and, a' <- attrRThat] <|> pure [])
    attrRs      <- rule ([[a] | a <- adjR] <|> [[a,a'] | a <- adjR, _and, a' <- adjR] <|> pure [])
    attrRight   <- rule [as <> as' | as <- attrRs, as' <- attrRThats]
 
-   predicateVerb <- rule [PredicateVerb p | p <- verb]
-   predicateAdj  <- rule [PredicateAdj p | _is, p <- adj]
-   predicate     <- rule (predicateVerb <|> predicateAdj)
-   thatPredicate <- rule (_that *> predicate)
+   verbPhraseVerb <- rule [VPVerb p | p <- verb]
+   verbPhraseAdj  <- rule [VPAdj p | _is, p <- adj]
+   verbPhraseNot  <- rule ([VPNot p | _does, _not, p <- verbPhraseVerb] <|> [VPNot (VPAdj p) | _is, _not, p <- adj])
+   verbPhrase'    <- rule (verbPhraseVerb <|> verbPhraseAdj <|> verbPhraseNot)
+   verbPhrase     <- rule verbPhrase' -- TODO add coordination.
+   thatVerbPhrase <- rule (_that *> verbPhrase)
 
-   notionName   <- rule (math (commaList_ var) <|> pure [])
+   nounName    <- rule (math (commaList_ var) <|> pure [])
+   nounPhrase  <- rule [NounPhrase as n as' ms  | as <- many adjL, n <- noun, as' <- attrRight, ms <- optional suchStmt]
+   nounsPhrase <- rule [NounPhrase as n as' ms | as <- many adjL, n <- nouns, as' <- attrRight, ms <- optional suchStmt]
 
-   notionBase   <- rule (notionOf lexicon sg term notionName)
-   notion       <- rule [Notion as n as' ms  | as <- many adjL, n <- notionBase, as' <- attrRight, ms <- optional suchStmt]
-   notionsBase  <- rule (notionOf lexicon pl term notionName)
-   notions      <- rule [Notion as n as' ms | as <- many adjL, n <- notionsBase, as' <- attrRight, ms <- optional suchStmt]
+   -- Quantification phrases for quantification and indfinite terms.
+   -- TODO add strict versions (grammatical number and number of variables) for indefinite terms. Split?
+   quantAll   <- rule [QuantPhrase QAll n | n <- (_every *> nounPhrase <|> _all *> nounsPhrase)]
+   quantSome  <- rule [QuantPhrase QSome n | _some, n <- nounPhrase <|> nounsPhrase]
+   quantNone  <- rule [QuantPhrase QNone n | _no, n <- nounPhrase <|> nounsPhrase]
+   quantUniq  <- rule [QuantPhrase QUniq n | _some, _unique, n <- nounPhrase]
+   quant      <- rule (quantAll <|> quantSome <|> quantNone <|> quantUniq)
+
 
    termExpr    <- rule [TermExpr f | f <- math formula]
    termFun     <- rule [TermFun p | _the, p <- fun]
    termIsolOp  <- rule [TermExpr (ExprConst f) | f <- math isolOp]
-   termSetOf   <- rule [TermSetOf n | _the, _setOf, optional _all, n <- notions]
+   termSetOf   <- rule [TermSetOf n | _the, _setOf, optional _all, n <- nounsPhrase]
    term        <- rule (termExpr <|> termFun <|> termIsolOp <|> termSetOf)
 
--- Basic statements are statements without any conjunctions or quantifiers.
---
-   stmtAttr    <- rule [StmtAdj t a | t <- term, _is, a <- adj]
-   stmtAttrNeg <- rule [StmtNeg (StmtAdj t a) | t <- term, _is, _not, a <- adj]
-   stmtVerb    <- rule [StmtVerb t x | t <- term, x <- verb]
-   stmtNotion  <- rule [StmtNotion t n | t <- term, _is, _an, n <- notion]
-   stmtExists  <- rule [StmtExists n | _exists, _an, n <- notion]
-   stmtFormula <- rule [StmtFormula e | e <- math formula]
-   stmtBase    <- rule (stmtAttr <|> stmtAttrNeg <|> stmtVerb <|> stmtNotion <|> stmtFormula <|> stmtExists)
 
-   stmtOr  <- rule (stmtBase <|> [StmtConj Or s1 s2 | s1 <- stmtBase, _or, s2 <- stmt])
+-- Basic statements `stmt'` are statements without any conjunctions or quantifiers.
+--
+   stmtVerb    <- rule [StmtVerbPhrase t x | t <- term, x <- verbPhrase]
+   stmtNoun    <- rule [StmtNoun t n | t <- term, _is, _an, n <- nounPhrase]
+   stmtExists  <- rule [StmtExists n | _exists, _an, n <- nounPhrase]
+   stmtFormula <- rule [StmtFormula e | e <- math formula]
+   stmt'       <- rule (stmtVerb <|> stmtNoun <|> stmtFormula <|> stmtExists)
+
+   stmtOr  <- rule (stmt' <|> [StmtConj Or s1 s2 | s1 <- stmt', _or, s2 <- stmt])
    stmtAnd <- rule (stmtOr   <|> [StmtConj And s1 s2 | s1 <- stmtOr, _and, s2 <- stmt])
    stmtIff <- rule (stmtAnd  <|> [StmtConj Iff s1 s2 | s1 <- stmtAnd, _iff, s2 <- stmt])
    stmtIf  <- rule [StmtConj If s1 s2 | _if, s1 <- stmt, optional _comma, _then, s2 <- stmt]
    stmtNeg <- rule [StmtNeg s | _itIsWrong, s <- stmt]
 
+   stmtQuantPhrase <- rule [StmtQuantPhrase q s | _for, q <- quant, optional _comma, s <- stmt]
+
    suchStmt <- rule [s | _suchThat, s <- stmt, optional _comma]
 
-   all       <- rule [All xs Nothing b s | _all <|> _every, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
-   allNotion <- rule [All xs (Just n) b s | _every, n <- notion, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
 
+   all         <- rule [All xs Nothing b s | _all <|> _every, xs <- math vars, b <- optional suchStmt, optional _have, s <- stmt]
    some        <- rule [Some xs Nothing s | _exists <|> _exist, xs <- math vars, _suchThat, s <- stmt]
-   someNotion  <- rule [SomeNotion nx s | _exists, _an, nx <- notion, _suchThat, s <- stmt]
-   someNotions <- rule [SomeNotion nx s | _exist, _an, nx <- notions, _suchThat, s <- stmt]
-
    none        <- rule [None xs Nothing s | _exists, _no, xs <- math vars, _suchThat, s <- stmt]
-   noneNotion  <- rule [None xs (Just n) s | _exists, _no, n <- notion, xs <- math vars, _suchThat, s <- stmt]
+   stmtQuant   <- rule (all <|> some <|> none)
 
-   stmtQuant        <- rule (all <|> some <|> none)
-   stmtQuantNotion  <- rule (allNotion <|> someNotion <|> noneNotion)
-   stmtQuantNotions <- rule someNotions
-
-   stmt <- rule (stmtNeg <|> stmtIf <|> stmtQuant <|> stmtQuantNotion <|> stmtQuantNotions <|> stmtIff)
+   stmt <- rule (stmtNeg <|> stmtIf <|> stmtQuant <|> stmtQuantPhrase <|> stmtIff)
 
    asmLetIn       <- rule [AsmLetIn xs e | _let, ~(xs, e) <- math typing]
-   asmLetNotion   <- rule [AsmLetNom (pure x) n | _let, x <- math var, _be <|> _denote, _an, n <- notion]
-   asmLetNotions  <- rule [AsmLetNom xs n | _let, xs <- math vars, _be <|> _denote, n <- notions]
+   asmLetNotion   <- rule [AsmLetNom (pure x) n | _let, x <- math var, _be <|> _denote, _an, n <- nounPhrase]
+   asmLetNotions  <- rule [AsmLetNom xs n | _let, xs <- math vars, _be <|> _denote, n <- nounsPhrase]
    asmLetEq       <- rule [AsmLetEq x e | _let, ~(x, e) <- math assignment]
    asmLetThe      <- rule [AsmLetThe x f | _let, x <- math var, _be, _the, f <- fun]
    asmLet         <- rule (asmLetNotion <|> asmLetNotions <|> asmLetIn <|> asmLetEq <|> asmLetThe)
    asmSuppose     <- rule [AsmSuppose s | _suppose, s <- stmt]
    asm            <- rule (assumptionList (asmLet <|> asmSuppose) <* _dot)
    asms           <- rule [concat as | as <- many asm]
-   --   asm            <- rule ((asmLet <|> asmSuppose) <* _dot)
 
    axiom <- rule [Axiom as s | as <- asms, optional _then, s <- stmt, _dot]
 
    thm <- rule [Thm as s | as <- asms, optional _then, s <- stmt, _dot]
 
-   defnAttr       <- rule [DefnAdj mn t a | mn <- optional (_an *> notion), t <- term, _is, a <- adj]
-   defnVerb       <- rule [DefnVerb mn t v | mn <- optional (_an *> notion), t <- term, v <- verb]
-   defnNotion     <- rule [DefnNotion mn t n | mn <- optional (_an *> notion), t <- term, _is, _an, n <- notion]
-   defnNoun <- rule [DefnNoun n n' | _an, n <- notionBase, _is, _an, n' <- notion]
+   defnAttr       <- rule [DefnAdj mn t a | mn <- optional (_an *> nounPhrase), t <- term, _is, a <- adj]
+   defnVerb       <- rule [DefnVerb mn t v | mn <- optional (_an *> nounPhrase), t <- term, v <- verb]
+   defnNotion     <- rule [DefnNotion mn t n | mn <- optional (_an *> nounPhrase), t <- term, _is, _an, n <- nounPhrase]
+   defnNoun <- rule [DefnNoun n n' | _an, n <- noun, _is, _an, n' <- nounPhrase]
    defnHead       <- rule (optional _write *> (defnAttr <|> defnVerb <|> defnNotion <|> defnNoun))
    defnIf         <- rule [Defn as head s | as <- asms, head <- defnHead, _iff <|> _if, s <- stmt, _dot]
 
@@ -189,7 +184,7 @@ grammar lexicon@Lexicon{..} = mdo
 
    -- In the future there needs to be dedicated functionality to handle isolated operators.
    -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
-   theoryHead   <- rule [(t, t', v) | _an, t <- notion, _extends, t' <- notion, v <- optional (math var)]
+   theoryHead   <- rule [(t, t', v) | _an, t <- nounPhrase, _extends, t' <- nounPhrase, v <- optional (math var)]
    theoryFun    <- rule $ math [(f, ty) | f <- cmd, _colon, ty <- formula]
    theoryRel    <- rule ([(r, ExprConst "REL") | _an, n <- arity, _relation, r <- math cmd]
                      <|> [(r, ExprConst "EndRel" `ExprApp` ExprVar a) | _an, _relation, r <- math cmd, _on, a <- math var])
@@ -197,7 +192,7 @@ grammar lexicon@Lexicon{..} = mdo
    theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])
    theory       <- rule [Theory t t' v fs as | ~(t, t', v) <- theoryHead, fs <- theorySig, as <- theoryAxioms]
 
-   inductiveFin <- rule [ InductiveFin cs | _an, notionBase, _is, _oneOf, cs <- orList2 (math cmd), _dot]
+   inductiveFin <- rule [ InductiveFin cs | _an, noun, _is, _oneOf, cs <- orList2 (math cmd), _dot]
    inductive    <- rule inductiveFin
 
    signatureAttr  <- rule [SignatureAdj x a | x <- math var, _can, _be, a <- adjOf lexicon (math var)]
@@ -308,8 +303,8 @@ funOf lexicon proj arg = patternOf Fun lexicon lexiconFuns proj arg
 -- the slots, and `var` for the name(s). The notion patterns are
 -- obtained from `lexicon`.
 --
-notionOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok arg -> Prod r e Tok [Var] -> Prod r e Tok (NounOf arg)
-notionOf lexicon proj arg vars =
+nounOf :: Lexicon -> (SgPl Pattern -> Pattern) -> Prod r e Tok arg -> Prod r e Tok [Var] -> Prod r e Tok (NounOf arg)
+nounOf lexicon proj arg vars =
    [Noun pat xs (args1 <> args2) | ~(args1, xs, args2, pat) <- asum (fmap make pats)]
    where
       pats = Set.toList (lexiconNoms lexicon)

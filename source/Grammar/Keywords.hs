@@ -28,7 +28,7 @@
 -- Care should be taken with introducing too many variants of
 -- a literal, lest the grammar becomes needlessly ambiguous!
 --
-module Grammar.Literals
+module Grammar.Keywords
    ( arity
    , _all
    , _an
@@ -37,6 +37,7 @@ module Grammar.Literals
    , _be
    , _can
    , _denote
+   , _does
    , _equipped
    , _every
    , _exist
@@ -60,6 +61,7 @@ module Grammar.Literals
    , _setOf
    , _show
    , _since
+   , _some
    , _suchThat
    , _suppose
    , _that
@@ -67,6 +69,7 @@ module Grammar.Literals
    , _then
    , _throughout
    , _thus
+   , _unique
    , _write
    -- Symbols
    , _colon
@@ -101,6 +104,7 @@ _are = w "are"
 _be = w "be"
 _can = w "can"
 _denote = w "denote"
+_does = w "does"
 _equipped = optional (w "equipped" <|> w "together") *>  "with"
 _every = optional (w "for") *> w "every"
 _exist = w "there" *> w "exist"
@@ -124,6 +128,7 @@ _satisfying = _suchThat <|> w "satisfying"
 _setOf = w "set" *> w "of"
 _show = optional (w "first" <|> w "finally" <|> w "next" <|> w "now") *> w "we" *> w "show" <* optional (w "that")
 _since = w "since" <|> w "because"
+_some = w "some"
 _suchThat = w "such" *> w "that"
 _suppose = w "suppose" <* optional (w "that")
 _that = w "that"
@@ -131,6 +136,7 @@ _the = w "the"
 _then = w "then"
 _throughout = w "throughout" <* optional (w "this" *> w "section") <* optional _comma <|> (w "in" *> w "the" *> w "sequel")
 _thus = w "thus"
+_unique = w "unique"
 _write = (optional (w "we") *> w "say" <* optional (w "that")) <|> (optional (w "we") *> w "write")
 
 
