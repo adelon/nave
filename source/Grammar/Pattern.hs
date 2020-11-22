@@ -5,7 +5,7 @@ module Grammar.Pattern where
 
 
 import Base
-import Lex (Tok(..), Delim(..))
+import Lex (Tok(..))
 
 
 import Text.Earley.Mixfix (Holey)
@@ -26,12 +26,12 @@ data SgPl a = SgPl {sg :: a, pl :: a} deriving (Show, Eq, Ord, Functor)
 
 
 unsafeReadPattern :: String -> Pattern
-unsafeReadPattern spec = case (fst (fullParses (parser patternSpec) spec)) of
+unsafeReadPattern spec = case fst (fullParses (parser patternSpec) spec) of
    pat : _ -> pat
    _ -> error "unsafeReadPattern failed"
 
 unsafeReadPatternSgPl :: String -> SgPl Pattern
-unsafeReadPatternSgPl spec = case (fst (fullParses (parser patternSpecSgPl) spec)) of
+unsafeReadPatternSgPl spec = case fst (fullParses (parser patternSpecSgPl) spec) of
    pat : _ -> pat
    _ -> error "unsafeReadPatternSgPl failed"
 
@@ -46,8 +46,7 @@ patternSpec = do
    word     <- rule [Just cs | cs <- many (satisfy isAlpha)]
    space    <- rule [Just [c] | c <- token ' ']
    segment  <- rule (hole <|> word)
-   segments <- rule [makePattern (s:ss) | s <- segment, ss <- many (space *> segment)]
-   pure segments
+   rule [makePattern (s:ss) | s <- segment, ss <- many (space *> segment)]
    where
       makePattern :: [Maybe String] -> Pattern
       makePattern pat = fmap makeWord pat
@@ -63,13 +62,12 @@ patternSpecSgPl = do
    complexWord <- rule $ (\(a,b) -> (Just a, Just b)) . fuse <$>
       many ((<>) <$> (dup <$> word) <*> wordSgPl) <?> "word"
    segment  <- rule (hole <|> [dup (Just w) | w <- word] <|> complexWord )
-   segments <- rule [makePattern (s:ss) | s <- segment, ss <- many (space *> segment)]
-   pure segments
+   rule [makePattern (s:ss) | s <- segment, ss <- many (space *> segment)]
    where
       dup x = (x,x)
       fuse = \case
          (a, b) : (c, d) : rest -> fuse ((a <> c, b <> d) : rest)
-         (a, b) : [] -> (a, b)
+         [(a, b)] -> (a, b)
          _ -> error "Grammar.Abstract.fuse"
 
       makePattern :: [(Maybe String, Maybe String)] -> SgPl Pattern
