@@ -14,8 +14,6 @@ import Grammar.Pattern (Pattern, SgPl(..))
 
 import Grammar.Abstract (Var(..), Chain(..), Formula, Expr(..), Term(..))
 import Grammar.Abstract (AdjOf(..), Adj, VerbOf(..), Verb, NounOf(..), Noun, FunOf(..), Fun, Conj(..))
-import qualified Grammar.Abstract as A
-
 
 
 

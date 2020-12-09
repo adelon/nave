@@ -12,7 +12,6 @@ import Lex (Tok(..), Delim(..))
 import Grammar.Pattern (Pattern, SgPl(..))
 
 import Text.Earley.Mixfix (Holey)
-import qualified Data.Text as Text
 
 
 

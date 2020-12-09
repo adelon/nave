@@ -46,13 +46,12 @@ grammar lexicon@Lexicon{..} = mdo
    var      <- rule (terminal maybeVarTok                   <?> "variable")
    vars     <- rule (commaList var)
    cmd      <- rule (terminal maybeCmdTok                   <?> "TEX command")
-
-
+--
 -- Formulae have three levels:
 --
--- * Expressions: atoms or operators applied to atoms.
--- * Chains:      comma-lists of expressions, separated by relators.
--- * Formulae:    chains or connectives applied to chains.
+-- + Expressions: atoms or operators applied to atoms.
+-- + Chains:      comma-lists of expressions, separated by relators.
+-- + Formulae:    chains or connectives applied to chains.
 --
 -- For example, the formula `x, y < z -> x, y < z + 1` consist of the
 -- connective `->` applied to two chains `x, y < z` and `x,y < z + 1`.
@@ -83,8 +82,8 @@ grammar lexicon@Lexicon{..} = mdo
    formulaBase <- rule [ExprChain c | c <- chain]
    formula     <- mixfixExpression conns formulaBase ExprOp
 
--- These are asymmetric formulas, in the sense that we only allow
--- variables on one side. They express judgements.
+-- These are asymmetric formulas (only variables are allowed on one side). 
+-- They express judgements.
 --
    assignment  <- rule [(x, e) | x <- var, _eq <|> _defeq, e <- formula]
    typing      <- rule [(xs, e) | xs <- vars, _in <|> _colon, e <- formula]
@@ -186,7 +185,7 @@ grammar lexicon@Lexicon{..} = mdo
    -- For now we can just parse them as a bare command (assuming that theories get fresh notation).
    theoryHead   <- rule [(t, t', v) | _an, t <- nounPhrase, _extends, t' <- nounPhrase, v <- optional (math var)]
    theoryFun    <- rule $ math [(f, ty) | f <- cmd, _colon, ty <- formula]
-   theoryRel    <- rule ([(r, ExprConst "REL") | _an, n <- arity, _relation, r <- math cmd]
+   theoryRel    <- rule ([(r, ExprConst "REL") | _an, _ <- arity, _relation, r <- math cmd]
                      <|> [(r, ExprConst "EndRel" `ExprApp` ExprVar a) | _an, _relation, r <- math cmd, _on, a <- math var])
    theorySig    <- rule [NonEmpty.toList fs | _equipped, fs <- signatureList (theoryFun <|> theoryRel)]
    theoryAxioms <- rule ([[] | _dot] <|> [[a] | _satisfying, a <- stmt, _dot])

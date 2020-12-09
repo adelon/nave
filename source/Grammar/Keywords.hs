@@ -3,31 +3,30 @@
 {-# OPTIONS_GHC -fplugin=Comprehension.Plugin #-}
 
 
--- This module defines lots of keywords, introduction sequences
--- and various filler phrases. Collectively we call them 'literals'.
--- The prefix underscore `_` should indicate that we typically do
--- not care about the parse result of literals by being reminiscent
--- of the explicit discard in do-notation `...; _ <- action; ...`.
--- Moreover, this convention allows us to use short names that
--- would otherwise be Haskell keywords (e.g.: `_let`, `_of`)
--- or clash with other definitions (e.g.: `_and, _or, _show`).
--- Names of literals are chosen by the the following criteria:
---
--- * Be as short as possible (e.g.: `_since` over `_because`).
--- * Sound like a keyword (e.g.: `_show`).
--- * Avoid confusion with other literals.
---
--- This module also defines symbols for parsing formulae
--- with special meaning (typings, variable assignments, etc.).
---
--- Since we do not care about the result type, we omit type
--- signatures in this module. Definitions are suppose to be
--- in alphabetical order. The explicit export list serves to
--- hide the ad-hoc shortening of `word` to `w`.
---
--- Care should be taken with introducing too many variants of
--- a literal, lest the grammar becomes needlessly ambiguous!
---
+{-|
+This module defines lots of keywords and various filler 
+phrases. The prefix underscore indicates that we do not 
+care about the parse result (analogous to  discarding 
+like @..; _ <- action; ...@ in do-notation). Moreover,  
+this convention allows the use of short names that would 
+otherwise be Haskell keywords or clash with other definitions. 
+Care should be taken with introducing too many variants of
+a keyword, lest the grammar becomes needlessly ambiguous!
+
+The names are chosen using the following criteria:
+
+   * As short as possible (e.g.: @_since@ over @_because@).
+
+   * Sound like a keyword (e.g.: @_show@).
+
+This module also defines symbols that have special uses 
+(such as @_colon@ for its use in type signatures).
+
+Since we do not care about the result type, we omit type
+signatures in this module. Definitions are suppose to be
+in alphabetical order. The explicit export list serves to
+hide the ad-hoc shortening of @word@ to @w@.
+-}
 module Grammar.Keywords
    ( arity
    , _all
