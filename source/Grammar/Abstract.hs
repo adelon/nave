@@ -21,7 +21,7 @@ newtype Var = Var {unVar :: Text} deriving (Show, Eq, Ord)
 
 
 -- In the concrete grammar there is a distinction between expressions
--- and formulae, to handle precedences correctly. In the abstract grammar
+-- and formulas to handle precedences correctly. In the abstract grammar
 -- this distinction is not needed. Thus `Formula = Expr`.
 
 data Expr
