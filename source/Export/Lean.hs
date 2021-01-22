@@ -285,6 +285,9 @@ exportDeclaration = \case
    ParaDefn defn -> exportDefinition defn
    InstrAsm asm -> exportAssumption asm
    InstrUse -> throw $ LTODO "InstrUse"
+   ParaInd _ -> throw $ LTODO "ParaInd"
+   ParaSig _ -> throw $ LTODO "ParaSig"
+
 
 -- TODO: Should asmConstraints be rendered as variables?
 -- TODO: Some free variable may have been bound by global assumptions.
@@ -382,17 +385,22 @@ exportQuant = \case
 exportLeanType :: LeanType -> Doc ann
 exportLeanType (LeanType t ts) = exportLean $ foldl' (LPrefixApp) (LSymbol t) ts
 
+exportVar :: Var -> Doc ann
+exportVar = \case
+   Var x -> pretty x
+   Fresh n -> "x" <> pretty n
+
 exportLean :: Lean -> Doc ann
 exportLean = go . pp
   where
     go = \case
       (LParen l) -> "(" <> go l <> ")"
-      (LVar (Var t)) -> pretty t
+      (LVar x) -> exportVar x
       (LPrefixApp l1 l2) ->  go l1 <+> go l2
       (LInfixApp t l1 l2) -> go l1 <+> pretty t <+> go l2
       (LNumber t) -> pretty t
       (LSymbol t) -> pretty t
-      (LQuant q vs mt l) -> (exportQuant q) <> hsep (((pretty . unVar) <$> toList vs)
+      (LQuant q vs mt l) -> (exportQuant q) <> hsep ((exportVar <$> toList vs)
         ++ (((":" <+>) . exportLeanType) <$> maybeToList mt)) <> "," <+> go l
       (LConj c l1 l2) -> go l1 <+> exportConj c <+> go l2
       (LNot l) -> "¬" <> go l

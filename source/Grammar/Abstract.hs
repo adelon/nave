@@ -15,7 +15,10 @@ import Text.Earley.Mixfix (Holey)
 
 
 
-newtype Var = Var {unVar :: Text} deriving (Show, Eq, Ord)
+data Var
+   = Var Text -- ^ A named variabled.
+   | Fresh Word64 -- ^ A nameless (abstract) variable. Should always come from desugaring.
+   deriving (Show, Eq, Ord)
 
 
 
