@@ -10,9 +10,11 @@ module Desugar where
 
 
 import Base
-
 import Grammar.Abstract
-import qualified Grammar.Desugared as D
+import qualified Grammar.Desugared as Desugared
+
+import Control.Monad.State
+
 
 
 type Desugaring = State DesugaringState
@@ -21,8 +23,8 @@ data DesugaringState = DesugaringState
    { currentFresh :: Word64
    } deriving (Show, Eq, Ord)
 
-desguar :: Desugaring a
-desugar = runState initialDesugaringState
+desugar :: Desugarable a b => a -> b
+desugar a = evalState (desugaring a) initialDesugaringState
    where
       initialDesugaringState = DesugaringState
          { currentFresh = 0
@@ -30,10 +32,10 @@ desugar = runState initialDesugaringState
 
 
 
-class Desugarable s d | s -> d where
-   desugaring :: s -> d
-   desugaring = todo "desugar incomplete"
+class Desugarable a b | a -> b where
+   desugaring :: a -> Desugaring b
+   desugaring = todo "desugaring incomplete"
 
 
 
-instance Desugarable Para D.Para
+instance Desugarable Para Desugared.Para

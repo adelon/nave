@@ -2,13 +2,13 @@
 
 module Nave
   ( tokenize, scan, parse, TokStream
-  , Desugarable(..)
+  , desugar
   , simpleStream, exportLean, compileLean
   , builtins, extendLexicon
   , LException(..), ParseException(..)) where
 
 import Base
-import Desugar (Desugarable(..))
+import Desugar (desugar)
 import Grammar.Abstract (Para)
 import Grammar.Concrete
 import Grammar.Lexicon (builtins, Lexicon)
